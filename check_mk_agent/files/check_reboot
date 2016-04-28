@@ -1,0 +1,10 @@
+#!/bin/bash
+if [ -f /var/run/reboot-required ];
+then
+status=1
+statustxt="System Restart Required"
+else
+status=0
+statustxt="No System Restart Required"
+fi
+echo "$status restart_required varname=2;crit $statustxt"
