@@ -1,0 +1,14 @@
+check_mk_agent:
+  server: 'checkmk.dwbn.org'
+  site: 'dwbn'
+  folder: 'sorthostsinfolder'
+  api-user: 'username'
+  api-secret: 'secret'
+  plugins:
+   - mk_mysql
+   - mk_postgress
+   - apache-status
+   - nginx-status
+  mk_mysql:
+   user: 'user'
+   pass: 'pass'
