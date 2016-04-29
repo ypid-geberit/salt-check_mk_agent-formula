@@ -1,6 +1,7 @@
 check_mk_agent:
   server: 'checkmk.dwbn.org'
   site: 'dwbn'
+  folder: 'sorthostsinfolder'
   api-user: 'username'
   api-secret: 'secret'
   plugins:
