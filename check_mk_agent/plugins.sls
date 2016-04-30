@@ -43,3 +43,13 @@
     - mode: 755
 
 {% endif %}
+
+{% if salt['pillar.get']('check_mk_agent:plugins:fileinfo') %}
+
+/etc/check_mk/fileinfo.cfg:
+  file.managed:
+    - source: salt://check_mk_agent/files/fileinfo.jinja
+    - mode: 644
+    - template: jinja
+
+{% endif %}

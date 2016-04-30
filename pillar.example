@@ -5,10 +5,11 @@ check_mk_agent:
   api-user: 'username'
   api-secret: 'secret'
   plugins:
-   - mk_mysql
-   - mk_postgress
-   - apache-status
-   - nginx-status
-  mk_mysql:
-   user: 'user'
-   pass: 'pass'
+   mk_mysql:
+     - 'user: foo'
+     - 'pass: bar'
+   apache-status: True
+   nginx-status: True
+   fileinfo:
+     - '/path/to/file'
+     - '/path/to/otherfile'

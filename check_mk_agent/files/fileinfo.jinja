@@ -1,0 +1,4 @@
+{% set fileinfopath_list = salt['pillar.get']('check_mk_agent:plugins:fileinfo', []) %}
+{%- for fileinfopath in fileinfopath_list %}
+{{ fileinfopath }}
+{%- endfor %}
