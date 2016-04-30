@@ -67,3 +67,12 @@
     - mode: 755
 
 {% endif %}
+
+{% if salt['pillar.get']('check_mk_agent:plugins:postgres') %}
+
+/usr/lib/check_mk_agent/plugins/mk_postgres:
+  file.managed:
+    - source: salt://check_mk_agent/files/mk_postgres
+    - mode: 755
+
+{% endif %}
