@@ -61,7 +61,7 @@
     - source: salt://check_mk_agent/files/haproxy.py
     - mode: 755
 
-/usr/lib/check_mk_agent/local/haproxy.py:
+/usr/lib/check_mk_agent/local/haproxychecks.py:
   file.managed:
     - source: salt://check_mk_agent/files/haproxychecks.py
     - mode: 755
