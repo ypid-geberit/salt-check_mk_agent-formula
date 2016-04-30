@@ -53,3 +53,17 @@
     - template: jinja
 
 {% endif %}
+
+{% if salt['pillar.get']('check_mk_agent:plugins:haproxy') %}
+
+/usr/lib/check_mk_agent/local/haproxy.py:
+  file.managed:
+    - source: salt://check_mk_agent/files/haproxy.py
+    - mode: 755
+
+/usr/lib/check_mk_agent/local/haproxy.py:
+  file.managed:
+    - source: salt://check_mk_agent/files/haproxychecks.py
+    - mode: 755
+
+{% endif %}
