@@ -31,4 +31,8 @@ dpkg -i /tmp/check-mk-agent_1.2.6p16-1_all.deb:
     - source: salt://check_mk_agent/files/check_reboot
     - mode: 755
 
-
+/etc/check_mk/mrpe.cfg:
+  file.managed:
+    - source: salt://check_mk_agent/files/mrpe.jinja
+    - mode: 644
+    - template: jinja

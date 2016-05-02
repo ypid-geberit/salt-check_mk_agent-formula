@@ -67,7 +67,7 @@
     - mode: 755
 
 {% endif %}
-
+ 
 {% if salt['pillar.get']('check_mk_agent:plugins:postgres') %}
 
 /usr/lib/check_mk_agent/plugins/mk_postgres:
@@ -75,4 +75,13 @@
     - source: salt://check_mk_agent/files/mk_postgres
     - mode: 755
 
+{% endif %}
+
+{% if salt['pillar.get']('check_mk_agent:plugins:supervisor') %}
+
+install-sensu-supervisor-gem:
+  gem.installed:
+    - names:
+      - sensu-plugins-supervisor
+      
 {% endif %}

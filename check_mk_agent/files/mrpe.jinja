@@ -1,0 +1,13 @@
+# do not edit
+# file is managed by saltstack
+{%- if salt['pillar.get']('check_mk_agent:plugins:supervisor') %}
+{{ salt['pillar.get']('check_mk_agent:plugins:supervisor') }}
+{% endif -%}
+{% if salt['pillar.get']('check_mk_agent:plugins:check-http-ping') %}
+{%- for checkping in salt['pillar.get']('check_mk_agent:plugins:check-http-ping', []) %}
+{{ checkping }}
+{% endfor -%}
+{% endif %}
+
+
+
