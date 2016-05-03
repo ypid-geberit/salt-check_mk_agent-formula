@@ -7,7 +7,7 @@ check_mk_agent:
   plugins:
    mysql:
      - 'user: foo'
-     - 'pass: bar'
+     - 'password: bar'
    apache-status: True
    nginx-status: True
    fileinfo:
