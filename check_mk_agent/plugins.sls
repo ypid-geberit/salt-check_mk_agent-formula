@@ -95,3 +95,12 @@ install-sensu-rabbitmq-gem:
       - sensu-plugins-rabbitmq
 
 {% endif %}
+
+{% if salt['pillar.get']('check_mk_agent:plugins:check-http-ping') %}
+
+install-sensu-http-gem:
+  gem.installed:
+    - names:
+      - sensu-plugins-http
+
+{% endif %}
