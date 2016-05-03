@@ -20,8 +20,9 @@
 
 /etc/check_mk/mysql.cfg:
   file.managed:
-    - source: salt://check_mk_agent/files/mysql.cfg
+    - source: salt://check_mk_agent/files/mysql.jinja
     - mode: 644
+    - template: jinja
 
 /usr/lib/check_mk_agent/plugins/mk_mysql:
   file.managed:

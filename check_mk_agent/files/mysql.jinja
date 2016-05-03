@@ -1,0 +1,5 @@
+[client]
+{%- for item in salt['pillar.get']('check_mk_agent:plugins:mysql', []) %}
+{{ item }}
+{% endfor %}
+

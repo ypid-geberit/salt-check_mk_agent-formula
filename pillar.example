@@ -5,7 +5,7 @@ check_mk_agent:
   api-user: 'username'
   api-secret: 'secret'
   plugins:
-   mk_mysql:
+   mysql:
      - 'user: foo'
      - 'pass: bar'
    apache-status: True
@@ -13,3 +13,7 @@ check_mk_agent:
    fileinfo:
      - '/path/to/file'
      - '/path/to/otherfile'
+   supervisor: 'checkname /usr/local/bin/check-supervisor.rb $Paramater'
+   check-http-ping:
+     - 'checkname /usr/local/bin/check-http-json.rb $Paramater'
+
