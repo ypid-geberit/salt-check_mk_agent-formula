@@ -8,6 +8,10 @@
 {{ checkping }}
 {% endfor -%}
 {% endif %}
-
+{% if salt['pillar.get']('check_mk_agent:plugins:rabbitmq') %}
+{%- for mqitem in salt['pillar.get']('check_mk_agent:plugins:rabbitmq', []) %}
+{{ mqitem }}
+{% endfor -%}
+{% endif %}
 
 

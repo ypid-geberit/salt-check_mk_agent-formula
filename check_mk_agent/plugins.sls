@@ -86,3 +86,12 @@ install-sensu-supervisor-gem:
       - sensu-plugins-supervisor
       
 {% endif %}
+
+{% if salt['pillar.get']('check_mk_agent:plugins:rabbitmq') %}
+
+install-sensu-rabbitmq-gem:
+  gem.installed:
+    - names:
+      - sensu-plugins-rabbitmq
+
+{% endif %}
