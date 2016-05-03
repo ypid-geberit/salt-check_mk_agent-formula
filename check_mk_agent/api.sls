@@ -29,3 +29,5 @@ add-host-at-first-run:
   cmd.run:
     - name: /usr/local/bin/add-host-check_mk.sh
     - creates: /etc/check_mk/firstrun
+    - require:
+      - sls: check_mk_agent.plugins
