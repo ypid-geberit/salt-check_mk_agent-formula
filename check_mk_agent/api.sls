@@ -5,7 +5,6 @@ include:
   - check_mk_agent
   - check_mk_agent.plugins
 
-
 /usr/local/bin/add-host-check_mk.sh:
   file.managed:
     - source: salt://check_mk_agent/files/add-host-check_mk.sh
@@ -18,7 +17,6 @@ include:
     - mode: 755
     - template: jinja
 
-
 /usr/local/bin/delete-host-check_mk.sh:
   file.managed:
     - source: salt://check_mk_agent/files/delete-host-check_mk.sh
@@ -30,7 +28,6 @@ include:
     - source: salt://check_mk_agent/files/delete-host-check_mk.sh
     - mode: 755
     - template: jinja
-
 
 /etc/rc0.d/K25delete-host-check_mk.sh:
   file.symlink:
@@ -60,5 +57,4 @@ add-host-at-first-run:
   cmd.run:
     - name: /usr/local/bin/add-host-check_mk.sh
     - creates: /etc/check_mk/firstrun
-    - require:
-      - sls: check_mk_agent.plugins
+
