@@ -13,7 +13,7 @@ check_mk-deb-present:
     - name: /tmp/check-mk-agent_1.2.8-1_all.deb
 
 dpkg -i /tmp/check-mk-agent_1.2.8-1_all.deb:
-  cmd.run:
+  cmd.run
 
 /usr/lib/check_mk_agent/plugins/mk_inventory:
   file.managed:
