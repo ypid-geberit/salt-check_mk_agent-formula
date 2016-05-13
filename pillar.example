@@ -2,6 +2,7 @@ check_mk_agent:
   server: 'checkmk.dwbn.org'
   site: 'dwbn'
   folder: 'sorthostsinfolder'
+  criticality: 'prod' # possible: prod, critical, test, dev, offline
   api-user: 'username'
   api-secret: 'secret'
   plugins:
