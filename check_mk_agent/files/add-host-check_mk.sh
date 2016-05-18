@@ -12,10 +12,10 @@
 #
 ### BEGIN INIT INFO
 # Provides:          check_mk_agent
-# Required-Start:    $remote_fs $network $named
-# Required-Stop:     $remote_fs $network $named
+# Required-Start:    $remote_fs $network $xinetd
+# Required-Stop:     $remote_fs $network $xinnetd
 # Default-Start:     2 3 4 5
-# Default-Stop:      
+# Default-Stop:      0 1 6
 # Short-Description: add host to check_mk on boot
 # Description:       add host to check_mk on boot
 #              

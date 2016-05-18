@@ -3,10 +3,10 @@
 
 
 ### BEGIN INIT INFO
-# Provides:       
-# Required-Start: $remote_fs $network
+# Provides:   check_mk_agent   
+# Required-Start: $remote_fs $network $xinetd
 # Required-Stop:  $remote_fs $network
-# Default-Start:
+# Default-Start:  2 3 4 5
 # Default-Stop:   0 1 6
 # Description:    check_mk - Remove Host on stop
 ### END INIT INFO
