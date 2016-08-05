@@ -25,6 +25,11 @@ dpkg -i /tmp/check-mk-agent_1.2.8-1_all.deb:
     - source: salt://check_mk_agent/files/mk_logins
     - mode: 755
 
+/usr/lib/check_mk_agent/plugins/netstat:
+  file.managed:
+    - source: salt://check_mk_agent/files/netstat
+    - mode: 755
+
 /usr/lib/check_mk_agent/local/check_reboot:
   file.managed:
     - source: salt://check_mk_agent/files/check_reboot
