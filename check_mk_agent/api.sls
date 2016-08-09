@@ -29,11 +29,11 @@ include:
     - mode: 755
     - template: jinja
 
-/etc/rc0.d/K02delete-host-check_mk.sh:
+/etc/rc0.d/K01delete-host-check_mk.sh:
   file.symlink:
     - target: /etc/init.d/delete-host-check_mk.sh
 
-/etc/rc6.d/K02delete-host-check_mk.sh:
+/etc/rc6.d/K01delete-host-check_mk.sh:
   file.symlink:
     - target: /etc/init.d/delete-host-check_mk.sh
 
