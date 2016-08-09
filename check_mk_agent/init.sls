@@ -15,8 +15,9 @@ check_mk-deb-present:
 dpkg -i /tmp/check-mk-agent_1.2.8-1_all.deb:
   cmd.run:
     - name: dpkg -i /var/cache/apt/archives/check-mk-agent_1.2.8-1_all.deb
-    - creates: /usr/bin/check_mk_agent
     - require:
+      - file: check_mk-deb-present
+    - onchanges:
       - file: check_mk-deb-present
 
 /usr/lib/check_mk_agent/plugins/mk_inventory:
