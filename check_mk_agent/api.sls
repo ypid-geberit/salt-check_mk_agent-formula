@@ -29,11 +29,11 @@ include:
     - mode: 755
     - template: jinja
 
-/etc/rc0.d/K25delete-host-check_mk.sh:
+/etc/rc0.d/K02delete-host-check_mk.sh:
   file.symlink:
     - target: /etc/init.d/delete-host-check_mk.sh
 
-/etc/rc6.d/K25delete-host-check_mk.sh:
+/etc/rc6.d/K02delete-host-check_mk.sh:
   file.symlink:
     - target: /etc/init.d/delete-host-check_mk.sh
 
@@ -57,4 +57,3 @@ add-host-at-first-run:
   cmd.run:
     - name: /usr/local/bin/add-host-check_mk.sh
     - creates: /etc/check_mk/firstrun
-
