@@ -10,10 +10,12 @@ xinetd:
 check_mk-deb-present:
   file.managed:
     - source: salt://check_mk_agent/files/check-mk-agent_1.2.8-1_all.deb
-    - name: /tmp/check-mk-agent_1.2.8-1_all.deb
+    - name: /var/cache/apt/archives/check-mk-agent_1.2.8-1_all.deb
 
 dpkg -i /tmp/check-mk-agent_1.2.8-1_all.deb:
-  cmd.run
+  cmd.run:
+    - name: dpkg -i /var/cache/apt/archives/check-mk-agent_1.2.8-1_all.deb
+    - creates: /usr/bin/check_mk_agent
 
 /usr/lib/check_mk_agent/plugins/mk_inventory:
   file.managed:
