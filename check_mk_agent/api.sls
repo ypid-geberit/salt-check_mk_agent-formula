@@ -22,13 +22,13 @@ include:
 /etc/init/add-to-cmk.conf:
   file.managed:
     - source: salt://check_mk_agent/files/add-to-cmk.conf
-    - mode: 755
+    - mode: 644
     - template: jinja
 
 /etc/init/del-from-cmk.conf:
   file.managed:
     - source: salt://check_mk_agent/files/del-from-cmk.conf
-    - mode: 755
+    - mode: 644
     - template: jinja
 
 {% endif %}
