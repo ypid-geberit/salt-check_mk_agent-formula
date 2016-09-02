@@ -37,3 +37,27 @@ add-host-at-first-run:
   cmd.run:
     - name: /usr/local/bin/add-host-check_mk.sh
     - creates: /etc/check_mk/firstrun
+
+/etc/rc0.d/K01delete-host-check_mk.sh:
+  file.absent
+
+/etc/init.d/delete-host-check_mk.sh:
+  file.absent
+
+/etc/init.d/add-host-check_mk.sh:
+  file.absent
+
+/etc/rc6.d/K01delete-host-check_mk.sh:
+  file.absent
+
+/etc/rc2.d/S25add-host-check_mk.sh:
+  file.absent
+
+/etc/rc3.d/S25add-host-check_mk.sh:
+  file.absent
+
+/etc/rc4.d/S25add-host-check_mk.sh:
+  file.absent
+
+/etc/rc5.d/S25add-host-check_mk.sh:
+  file.absent
