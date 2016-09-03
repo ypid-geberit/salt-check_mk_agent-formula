@@ -43,8 +43,8 @@ include:
 
 enable_systemd_scripts:
   cmd.run:
-    name: systemdctl enable add-to-cmk.service del-from-cmk.service
-    creates: /etc/systemd/system/multi-user.target.wants/add-to-cmk.service
+    - name: systemdctl enable add-to-cmk.service del-from-cmk.service
+    - creates: /etc/systemd/system/multi-user.target.wants/add-to-cmk.service
 
 
 {% endif %}
