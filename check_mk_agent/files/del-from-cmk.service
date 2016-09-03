@@ -4,7 +4,7 @@ Requires=network.target
 Before=shutdown.target
 
 [Service]
-ExecStart=/usr/bin/bash -c /usr/local/bin/delete-host-check_mk.sh 
+ExecStart=/bin/bash -c /usr/local/bin/delete-host-check_mk.sh 
 Type=oneshot
 RemainAfterExit=yes
 
