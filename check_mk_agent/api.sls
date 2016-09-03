@@ -7,13 +7,13 @@ include:
 
 /usr/local/bin/add-host-check_mk.sh:
   file.managed:
-    - source: salt://check_mk_agent/files/add-host-check_mk.sh
+    - source: salt://check_mk_agent/files/add_delete/add-host-check_mk.sh
     - mode: 755
     - template: jinja
 
 /usr/local/bin/delete-host-check_mk.sh:
   file.managed:
-    - source: salt://check_mk_agent/files/delete-host-check_mk.sh
+    - source: salt://check_mk_agent/files/add_delete/delete-host-check_mk.sh
     - mode: 755
     - template: jinja
 
@@ -21,24 +21,24 @@ include:
 
 /etc/init/add-to-cmk.conf:
   file.managed:
-    - source: salt://check_mk_agent/files/add-to-cmk.conf
+    - source: salt://check_mk_agent/files/upstart/add-to-cmk.conf
     - mode: 644
 
 /etc/init/del-from-cmk.conf:
   file.managed:
-    - source: salt://check_mk_agent/files/del-from-cmk.conf
+    - source: salt://check_mk_agent/files/upstart/del-from-cmk.conf
     - mode: 644
 
 {% elif grains['init'] == 'systemd' %}
 
 /etc/systemd/system/add-to-cmk.service:
   file.managed:
-    - source: salt://check_mk_agent/files/add-to-cmk.service
+    - source: salt://check_mk_agent/files/systemd/add-to-cmk.service
     - mode: 644
 
 /etc/systemd/system/del-from-cmk.service:
   file.managed:
-    - source: salt://check_mk_agent/files/del-from-cmk.service
+    - source: salt://check_mk_agent/files/systemd/del-from-cmk.service
     - mode: 644
 
 enable_systemd_scripts:

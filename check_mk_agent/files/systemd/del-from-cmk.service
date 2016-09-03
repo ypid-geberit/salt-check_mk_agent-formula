@@ -3,7 +3,7 @@ Description="delete host from check_mk"
 DefaultDependencies=no
 Before=shutdown.target reboot.target halt.target
 
-[Service]a
+[Service]
 Type=oneshot
 ExecStart=/bin/bash -c /usr/local/bin/delete-host-check_mk.sh 
 RemainAfterExit=yes

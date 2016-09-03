@@ -10,7 +10,7 @@ xinetd:
 check_mk-deb-present:
   file.managed:
     - source: salt://check_mk_agent/files/check-mk-agent_1.2.8-1_all.deb
-    - name: /var/cache/apt/archives/check-mk-agent_1.2.8-1_all.deb
+    - name: /var/cache/apt/archives/deb/check-mk-agent_1.2.8-1_all.deb
 
 dpkg -i /tmp/check-mk-agent_1.2.8-1_all.deb:
   cmd.run:
@@ -22,26 +22,26 @@ dpkg -i /tmp/check-mk-agent_1.2.8-1_all.deb:
 
 /usr/lib/check_mk_agent/plugins/mk_inventory:
   file.managed:
-    - source: salt://check_mk_agent/files/mk_inventory
+    - source: salt://check_mk_agent/files/plugins/mk_inventory
     - mode: 755
 
 /usr/lib/check_mk_agent/plugins/mk_logins:
   file.managed:
-    - source: salt://check_mk_agent/files/mk_logins
+    - source: salt://check_mk_agent/files/plugins/mk_logins
     - mode: 755
 
 /usr/lib/check_mk_agent/plugins/netstat:
   file.managed:
-    - source: salt://check_mk_agent/files/netstat
+    - source: salt://check_mk_agent/files/plugins/netstat
     - mode: 755
 
 /usr/lib/check_mk_agent/local/check_reboot:
   file.managed:
-    - source: salt://check_mk_agent/files/check_reboot
+    - source: salt://check_mk_agent/files/plugins/check_reboot
     - mode: 755
 
 /etc/check_mk/mrpe.cfg:
   file.managed:
-    - source: salt://check_mk_agent/files/mrpe.jinja
+    - source: salt://check_mk_agent/files/cfg/mrpe.jinja
     - mode: 644
     - template: jinja

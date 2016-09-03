@@ -6,12 +6,12 @@
 
 /etc/check_mk/nginx_status.cfg:
   file.managed:
-    - source: salt://check_mk_agent/files/nginx_status.cfg
+    - source: salt://check_mk_agent/files/cfg/nginx_status.cfg
     - mode: 644
 
 /usr/lib/check_mk_agent/plugins/nginx_status:
   file.managed:
-    - source: salt://check_mk_agent/files/nginx_status
+    - source: salt://check_mk_agent/files/plugins/nginx_status
     - mode: 755
 
 {% endif %}
@@ -20,13 +20,13 @@
 
 /etc/check_mk/mysql.cfg:
   file.managed:
-    - source: salt://check_mk_agent/files/mysql.jinja
+    - source: salt://check_mk_agent/files/cfg/mysql.jinja
     - mode: 644
     - template: jinja
 
 /usr/lib/check_mk_agent/plugins/mk_mysql:
   file.managed:
-    - source: salt://check_mk_agent/files/mk_mysql
+    - source: salt://check_mk_agent/files/plugins/mk_mysql
     - mode: 755
 
 {% endif %}
@@ -35,12 +35,12 @@
 
 /etc/check_mk/apache_status.cfg:
   file.managed:
-    - source: salt://check_mk_agent/files/apache_status.cfg
+    - source: salt://check_mk_agent/files/cfg/apache_status.cfg
     - mode: 644
 
 /usr/lib/check_mk_agent/plugins/apache_status:
   file.managed:
-    - source: salt://check_mk_agent/files/apache_status
+    - source: salt://check_mk_agent/files/plugins/apache_status
     - mode: 755
 
 {% endif %}
@@ -49,7 +49,7 @@
 
 /etc/check_mk/fileinfo.cfg:
   file.managed:
-    - source: salt://check_mk_agent/files/fileinfo.jinja
+    - source: salt://check_mk_agent/files/cfg/fileinfo.jinja
     - mode: 644
     - template: jinja
 
@@ -59,12 +59,12 @@
 
 /usr/lib/check_mk_agent/local/haproxy.py:
   file.managed:
-    - source: salt://check_mk_agent/files/haproxy.py
+    - source: salt://check_mk_agent/files/plugins/haproxy.py
     - mode: 755
 
 /usr/lib/check_mk_agent/local/haproxychecks.py:
   file.managed:
-    - source: salt://check_mk_agent/files/haproxychecks.py
+    - source: salt://check_mk_agent/files/plugins/haproxychecks.py
     - mode: 755
 
 {% endif %}
@@ -73,7 +73,7 @@
 
 /usr/lib/check_mk_agent/plugins/mk_postgres:
   file.managed:
-    - source: salt://check_mk_agent/files/mk_postgres
+    - source: salt://check_mk_agent/files/plugins/mk_postgres
     - mode: 755
 
 {% endif %}
