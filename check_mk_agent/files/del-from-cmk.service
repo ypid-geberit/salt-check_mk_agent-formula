@@ -1,12 +1,10 @@
 [Unit]
-Description=Log Traffic
+Description="delete host from check_mk"
 Requires=network.target
-After=network.target
 Before=shutdown.target
-DefaultDependencies=no
 
 [Service]
-ExecStart=/home/me/so.pl
+ExecStart=/usr/bin/bash -c /usr/local/bin/delete-host-check_mk.sh 
 Type=oneshot
 RemainAfterExit=yes
 

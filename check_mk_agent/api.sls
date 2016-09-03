@@ -23,13 +23,29 @@ include:
   file.managed:
     - source: salt://check_mk_agent/files/add-to-cmk.conf
     - mode: 644
-    - template: jinja
 
 /etc/init/del-from-cmk.conf:
   file.managed:
     - source: salt://check_mk_agent/files/del-from-cmk.conf
     - mode: 644
-    - template: jinja
+
+{% elif grains['init'] == 'systemd' %}
+
+/etc/systemd/system/add-to-cmk.service:
+  file.managed:
+    - source: salt://check_mk_agent/files/add-to-cmk.service
+    - mode: 644
+
+/etc/systemd/system/del-from-cmk.service:
+  file.managed:
+    - source: salt://check_mk_agent/files/del-from-cmk.service
+    - mode: 644
+
+enable_systemd_scripts:
+  cmd.run:
+    name: systemdctl enable add-to-cmk.service del-from-cmk.service
+    creates: /etc/systemd/system/multi-user.target.wants/add-to-cmk.service
+
 
 {% endif %}
 

@@ -1,0 +1,11 @@
+[Unit]
+Description="add host to check_mk"
+Requires=network.target
+
+[Service]
+ExecStart=/usr/bin/bash -c /usr/local/bin/add-host-check_mk.sh 
+Type=oneshot
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
