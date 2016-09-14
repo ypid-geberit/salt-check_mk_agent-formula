@@ -1,5 +1,5 @@
 #! /bin/bash
-{% if check_mk_agent.hostip %}
+{% if salt['pillar.get']('check_mk_agent:hostip') %}
 {%- set webtrustip = salt['pillar.get']('check_mk_agent:hostip') %}
 {% else %}
 {%- set webtrustip = salt.network.ip_addrs(cidr='192.168.10.0/24')[0] %}
