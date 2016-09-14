@@ -1,5 +1,6 @@
 check_mk_agent:
   server: 'checkmk.dwbn.org'
+  hostip: '217.164.64.xxx' # optional only needed if no webtrust ip
   site: 'dwbn'
   folder: 'sorthostsinfolder'
   criticality: 'prod' # possible: prod, critical, test, dev, offline
