@@ -2,6 +2,7 @@
 Description="delete host from check_mk"
 DefaultDependencies=no
 Before=shutdown.target reboot.target halt.target
+JobTimeoutSec=15
 
 [Service]
 Type=oneshot
