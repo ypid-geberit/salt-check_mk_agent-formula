@@ -39,6 +39,14 @@ dpkg -i /tmp/check-mk-agent_1.2.8-1_all.deb:
   file.managed:
     - source: salt://check_mk_agent/files/plugins/check_reboot
     - mode: 755
+    
+/usr/lib/check_mk_agent/plugins/3600/mk_apt:
+  file.managed:
+    - source: salt://check_mk_agent/files/plugins/mk_apt
+    - mode: 755
+    - makedirs: True
+    - dir_mode: 755
+
 
 /etc/check_mk/mrpe.cfg:
   file.managed:
