@@ -63,4 +63,3 @@ if type apt-get > /dev/null ; then
         echo "$out"
     fi
 fi
-
