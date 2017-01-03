@@ -110,11 +110,11 @@ install-sensu-http-gem:
 perl:
   pkg.installed
 
-installSwift:
+installSwitch:
   cmd.run:
     - env:
       - PERL_AUTOINSTALL='--defaultdeps' PERL_MM_USE_DEFAULT=1
-    - name: perl -MCPAN -e 'install Swift'
+    - name: perl -MCPAN -e 'install Switch'
 
 
 /usr/local/bin/check-varnish.pl:
