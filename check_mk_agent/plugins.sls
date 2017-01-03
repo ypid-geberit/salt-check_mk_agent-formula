@@ -111,11 +111,10 @@ perl:
   pkg.installed
 
 installSwift:
-  cmd:
+  cmd.run:
     - env:
       - PERL_AUTOINSTALL='--defaultdeps' PERL_MM_USE_DEFAULT=1
-    - run:
-      - perl -MCPAN -e 'install Swift'
+    - name: perl -MCPAN -e 'install Swift'
 
 
 /usr/local/bin/check-varnish.pl:
