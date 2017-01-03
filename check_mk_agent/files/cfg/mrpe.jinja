@@ -13,5 +13,8 @@
 {{ mqitem }}
 {% endfor -%}
 {% endif %}
-
-
+{% if salt['pillar.get']('check_mk_agent:plugins:varnish') %}
+{%- for varitem in salt['pillar.get']('check_mk_agent:plugins:varnish', []) %}
+{{ varitem }}
+{% endfor -%}
+{% endif %}

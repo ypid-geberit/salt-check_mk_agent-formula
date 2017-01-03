@@ -68,7 +68,7 @@
     - mode: 755
 
 {% endif %}
- 
+
 {% if salt['pillar.get']('check_mk_agent:plugins:postgres') %}
 
 /usr/lib/check_mk_agent/plugins/mk_postgres:
@@ -84,7 +84,7 @@ install-sensu-supervisor-gem:
   gem.installed:
     - names:
       - sensu-plugins-supervisor
-      
+
 {% endif %}
 
 {% if salt['pillar.get']('check_mk_agent:plugins:rabbitmq') %}
@@ -102,5 +102,25 @@ install-sensu-http-gem:
   gem.installed:
     - names:
       - sensu-plugins-http
+
+{% endif %}
+
+{% if salt['pillar.get']('check_mk_agent:plugins:varnish') %}
+
+perl:
+  pkg.installed
+
+installSwift:
+  cmd:
+    - env:
+      - PERL_AUTOINSTALL='--defaultdeps' PERL_MM_USE_DEFAULT=1
+    - run:
+      - perl -MCPAN -e 'install Swift'
+
+
+/usr/local/bin/check-varnish.pl:
+  file.managed:
+    - source: salt://check_mk_agent/files/plugins/check-varnish.pl
+    - mode: 755
 
 {% endif %}
