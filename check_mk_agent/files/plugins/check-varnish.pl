@@ -176,7 +176,7 @@ if($options{'cache'}) {
 if($options{'backend'}) {
 	#print $results{'backend_conn'}."\n";
 	if($options{'backend'} eq "all") {
-		$stats = "MAIN.backend_conn -f MAIN.backend_unhealthy -F MAIN.backend_busy -f MAIN.backend_fail -f MAIN.backend_resuse -f MAIN.backend_recycle -f MAIN.backend_retry";
+		$stats = "MAIN.backend_conn -f MAIN.backend_unhealthy -f MAIN.backend_busy -f MAIN.backend_fail -f MAIN.backend_resuse -f MAIN.backend_recycle -f MAIN.backend_retry";
 		run_varnishstat_command();
 		$result="";
 		$perfdata="";
