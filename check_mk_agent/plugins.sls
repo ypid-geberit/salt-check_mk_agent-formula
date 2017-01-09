@@ -123,3 +123,17 @@ installSwitch:
     - mode: 755
 
 {% endif %}
+
+
+{% if salt['pillar.get']('check_mk_agent:plugins:jolokia') %}
+
+/usr/lib/check_mk_agent/plugins/mk_jolokia:
+  file.managed:
+    - source: salt://check_mk_agent/files/plugins/mk_jolokia
+    - mode: 755
+
+/var/lib/tomcat8/webapps/jolokia.war:
+  -file.managed:
+    - source: http://central.maven.org/maven2/org/jolokia/jolokia-war/1.3.5/jolokia-war-1.3.5.war
+
+{% endif %} 
