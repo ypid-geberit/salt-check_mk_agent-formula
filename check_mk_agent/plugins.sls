@@ -135,5 +135,6 @@ installSwitch:
 /var/lib/tomcat8/webapps/jolokia.war:
   file.managed:
     - source: http://central.maven.org/maven2/org/jolokia/jolokia-war/1.3.5/jolokia-war-1.3.5.war
+    - skip_verify: True
 
 {% endif %}
