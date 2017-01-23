@@ -166,7 +166,7 @@ if($options{'help'}) {
 
 if($options{'cache'}) {
 	check_warn_crit();
-	$stats = "MAIN.cache_hit -f MAIN.cache_hitpass -f MAIN.cache_miss";
+	$stats = "'*.cache_hit' -f '*.cache_hitpass' -f '*.cache_miss'";
 	run_varnishstat_command();
 	$hitratio = sprintf("%.2f", get_hit_ratio());
 	$overallresult= check_thresholds($hitratio, "lt");
@@ -176,7 +176,7 @@ if($options{'cache'}) {
 if($options{'backend'}) {
 	#print $results{'backend_conn'}."\n";
 	if($options{'backend'} eq "all") {
-		$stats = "MAIN.backend_conn -f MAIN.backend_unhealthy -f MAIN.backend_busy -f MAIN.backend_fail -f MAIN.backend_resuse -f MAIN.backend_recycle -f MAIN.backend_retry";
+		$stats = "'*.backend_conn' -f '*.backend_unhealthy' -f '*.backend_busy' -f '*.backend_fail' -f '*.backend_resuse' -f '*.backend_recycle' -f '*.backend_retry'";
 		run_varnishstat_command();
 		$result="";
 		$perfdata="";
