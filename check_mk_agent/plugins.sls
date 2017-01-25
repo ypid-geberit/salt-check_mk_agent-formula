@@ -116,7 +116,7 @@ installSwitch:
       - PERL_AUTOINSTALL='--defaultdeps'
       - PERL_MM_USE_DEFAULT=1
     - name: perl -MCPAN -e 'install Switch'
-    - creates: /usr/local/share/perl/*/Switch.pm
+    - creates: /usr/local/share/man/man3/Switch.3pm
 
 
 /usr/local/bin/check-varnish.pl:
