@@ -5,7 +5,7 @@ servers = [
     {
        "protocol" : "http",
        "address"  : "localhost",
-       "port"     : 80,
+       "port"     : {{ salt['pillar.get']('check_mk_agent:plugins:nginx:port', '80') }},
        "page"     : "nginx-status",
 
     },

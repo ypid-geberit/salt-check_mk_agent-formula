@@ -7,9 +7,9 @@
 /etc/check_mk/nginx_status.cfg:
   file.managed:
     - source:
-      - salt://{{ grains['nodename'] }}/check_mk_agent/files/cfg/nginx_status.cfg
-      - salt://check_mk_agent/files/cfg/nginx_status.cfg
+      - salt://check_mk_agent/files/cfg/nginx_status.jinja
     - mode: 644
+    - template: jinja
 
 /usr/lib/check_mk_agent/plugins/nginx_status:
   file.managed:
