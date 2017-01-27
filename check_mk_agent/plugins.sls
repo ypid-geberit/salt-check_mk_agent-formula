@@ -6,7 +6,9 @@
 
 /etc/check_mk/nginx_status.cfg:
   file.managed:
-    - source: salt://check_mk_agent/files/cfg/nginx_status.cfg
+    - source:
+      - salt://{{ grains['nodename'] }}/check_mk_agent/files/cfg/nginx_status.cfg
+      - salt://check_mk_agent/files/cfg/nginx_status.cfg
     - mode: 644
 
 /usr/lib/check_mk_agent/plugins/nginx_status:
