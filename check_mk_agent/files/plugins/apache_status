@@ -117,7 +117,7 @@ if servers is None:
 if not servers:
     sys.exit(0)
 
-print '<<<apache_status>>>'
+sys.stdout.write('<<<apache_status>>>\n')
 for server in servers:
     if isinstance(server, tuple):
         proto, address, port = server
@@ -137,9 +137,18 @@ for server in servers:
             request = urllib2.Request(url, headers={"Accept" : "text/plain"})
             fd = urllib2.urlopen(request)
         except urllib2.URLError, e:
-            if 'SSL23_GET_SERVER_HELLO:unknown protocol' in str(e):
+            if 'unknown protocol' in str(e):
                 # HACK: workaround misconfigurations where port 443 is used for
                 # serving non ssl secured http
+                url = 'http://%s%s/server-status?auto' % (address, portspec)
+                fd = urllib2.urlopen(url)
+            else:
+                raise
+        except Exception, e:
+            if 'doesn\'t match' in str(e):
+                # HACK: workaround if SSL port is found and localhost is using
+                # SSL connections but certifiacte is mismatched
+                portspec = ':80'
                 url = 'http://%s%s/server-status?auto' % (address, portspec)
                 fd = urllib2.urlopen(url)
             else:
@@ -151,7 +160,7 @@ for server in servers:
             if line.lstrip()[0] == '<':
                 # seems to be html output. Skip this server.
                 break
-            print address, port, line
+            sys.stdout.write("%s %s %s\n" % (address, port, line))
     except urllib2.HTTPError, e:
         sys.stderr.write('HTTP-Error (%s%s): %s %s\n' % (address, portspec, e.code, e))
 
