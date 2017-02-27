@@ -31,6 +31,11 @@ dpkg -i /var/cache/apt/archives/check-mk-agent_1.4.0b2-1_all.deb:
     - source: salt://check_mk_agent/files/plugins/mk_logins
     - mode: 755
 
+/usr/lib/check_mk_agent/plugins/lvm:
+  file.managed:
+    - source: salt://check_mk_agent/files/plugins/lvm
+    - mode: 755
+
 /usr/lib/check_mk_agent/plugins/netstat:
   file.managed:
     - source: salt://check_mk_agent/files/plugins/netstat

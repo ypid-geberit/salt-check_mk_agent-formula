@@ -142,3 +142,14 @@ installSwitch:
     - skip_verify: True
 
 {% endif %}
+
+{% if salt['pillar.get']('check_mk_agent:plugins:apt') %}
+
+/usr/lib/check_mk_agent/plugins/3600/mk_apt:
+   file.managed:
+     - source: salt://check_mk_agent/files/plugins/mk_apt
+     - mode: 755
+     - makedirs: True
+     - dir_mode: 755
+     
+{% endif %}
