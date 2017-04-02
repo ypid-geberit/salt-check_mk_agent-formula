@@ -138,8 +138,8 @@ installSwitch:
 
 /var/lib/tomcat8/webapps/jolokia.war:
   file.managed:
-    - source: http://central.maven.org/maven2/org/jolokia/jolokia-war/1.3.5/jolokia-war-1.3.5.war
-    - skip_verify: True
+    - source: salt://check_mk_agent/files/plugins/jolokia-war-1.3.5.war
+    - mode: 644
 
 {% endif %}
 
@@ -151,5 +151,5 @@ installSwitch:
      - mode: 755
      - makedirs: True
      - dir_mode: 755
-     
+
 {% endif %}
