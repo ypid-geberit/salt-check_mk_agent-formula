@@ -4,7 +4,7 @@
 include:
   - check_mk_agent.api
   - check_mk_agent.plugins
-
+  - check_mk_agent.config
 xinetd:
   pkg.installed
 

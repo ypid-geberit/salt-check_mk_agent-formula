@@ -9,8 +9,12 @@ service check_mk
         protocol       = tcp
         wait           = no
         user           = root
+        {% if salt['pillar.get']('check_mk_agent:config:caching') %}
+        server         = /usr/bin/check_mk_caching_agent
+        {% else %}
         server         = /usr/bin/check_mk_agent
-
+        {% endif %}
+        
         # listen on IPv4 AND IPv6 when available on this host
         #flags          = IPv6
 
@@ -21,12 +25,22 @@ service check_mk
 
         # configure the IP address(es) of your Nagios server here:
         #only_from      = 127.0.0.1 10.0.20.1 10.0.20.2
-
-
+        {% if salt['pillar.get']('check_mk_agent:config:xinetd:only_from') %}
+        only_from      = {{ salt['pillar.get']('check_mk_agent:config:xinetd:only_from', '127.0.0.1') }}
+        {% endif %}
         # Don't be too verbose. Don't log every check. This might be
         # commented out for debugging. If this option is commented out
         # the default options will be used for this service.
+        {% if salt['pillar.get']('check_mk_agent:config:xinetd:debug') %}
+        # log_on_success =
+        {% else %}
         log_on_success =
+        {% endif %}
 
+
+        {% if salt['pillar.get']('check_mk_agent:config:xinetd') %}
         disable        = no
+        {% else %}
+        disable        = no
+        {% endif %}
 }
