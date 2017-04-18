@@ -14,7 +14,7 @@ service check_mk
         {% else %}
         server         = /usr/bin/check_mk_agent
         {% endif %}
-        
+
         # listen on IPv4 AND IPv6 when available on this host
         #flags          = IPv6
 
@@ -41,6 +41,6 @@ service check_mk
         {% if salt['pillar.get']('check_mk_agent:config:xinetd') %}
         disable        = no
         {% else %}
-        disable        = no
+        disable        = yes
         {% endif %}
 }
