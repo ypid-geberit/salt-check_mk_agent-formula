@@ -1,7 +1,7 @@
 # do not edit
 # file is managed by saltstack
 {%- if salt['pillar.get']('check_mk_agent:plugins:supervisor') %}
-check-supervisor-socket /usr/local/bin/check-supervisor-socket.rb
+check-supervisor /usr/local/bin/check-supervisor-socket.rb
 {% endif -%}
 {% if salt['pillar.get']('check_mk_agent:plugins:check-http-ping') %}
 {%- for checkping in salt['pillar.get']('check_mk_agent:plugins:check-http-ping', []) %}
