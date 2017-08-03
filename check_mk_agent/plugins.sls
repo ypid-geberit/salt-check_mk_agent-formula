@@ -153,3 +153,12 @@ installSwitch:
      - dir_mode: 755
 
 {% endif %}
+
+{% if salt['pillar.get']('check_mk_agent:plugins:docker') %}
+
+/usr/lib/check_mk_agent/plugins/check_docker:
+  file.managed:
+    - source: salt://check_mk_agent/files/plugins/check_docker
+    - mode: 755
+
+{% endif %}
