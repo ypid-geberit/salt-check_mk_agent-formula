@@ -120,8 +120,9 @@ class HAProxyStats(object):
         buff = StringIO()
         end = time() + timeout
 
-        client = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-
+        client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        # client = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        
         try:
             client.connect(self.socket_name)
             client.send('show stat' + '\n')
@@ -142,13 +143,15 @@ class HAProxyStats(object):
 
 if __name__ == "__main__":
 
-    socketfile = "/var/lib/haproxy/stats"
+   # socketfile = "/var/lib/haproxy/stats"
+    address = '127.0.0.1'
+    port = 14567
 
-    if not os.path.exists(socketfile):
-            print "Socket does not exist"
-            sys.exit(1)
+   # if not os.path.exists(socketfile):
+   #         print "Socket does not exist"
+   #         sys.exit(1)
 
-    statssocket = HAProxyStats(socketfile)
+    statssocket = HAProxyStats((address, port))
     stats = statssocket.getstats()
 
     from haproxychecks import checks
