@@ -44,7 +44,7 @@ check_mk-rpm-present:
       - source: salt://check_mk_agent/files/rpm/check-mk-agent-1.4.0p24-1.noarch.rpm
       - name: /root/check-mk-agent-1.4.0p24-1.noarch.rpm
   
-  rpm -i /root/check-mk-agent-1.4.0p24-1.noarch.rpm:
+rpm -i /root/check-mk-agent-1.4.0p24-1.noarch.rpm:
     cmd-run:
       - onchanges:
         - file: check_mk-rpm-present
