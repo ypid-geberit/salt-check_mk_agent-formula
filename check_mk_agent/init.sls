@@ -45,7 +45,8 @@ check_mk-rpm-present:
       - name: /root/check-mk-agent-1.4.0p24-1.noarch.rpm
   
 rpm -i /root/check-mk-agent-1.4.0p24-1.noarch.rpm:
-    cmd-run:
+    cmd-run: rpm -i /root/check-mk-agent-1.4.0p24-1.noarch.rpm
+      - name:
       - onchanges:
         - file: check_mk-rpm-present
 {% endif %}
