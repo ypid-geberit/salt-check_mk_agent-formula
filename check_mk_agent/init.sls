@@ -39,6 +39,15 @@ dpkg -i /var/cache/apt/archives/check-mk-agent_1.4.0b2-1_all.deb:
 
 {% elif grains['os_family'] == 'RedHat' %}
 
+firewall-cmd --zone=public --add-port=6556/tcp --permanent:
+  cmd.run:
+    - name: firewall-cmd --zone=public --add-port=6556/tcp --permanent
+
+xinetd_service:
+  service.running:
+    - enable: True 
+    - name: xinetd
+
 check_mk-rpm-present:
     file.managed:
       - source: salt://check_mk_agent/files/rpm/check-mk-agent-1.4.0p24-1.noarch.rpm
