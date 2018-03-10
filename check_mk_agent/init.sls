@@ -8,7 +8,7 @@ include:
 xinetd:
   pkg.installed
 
-{% if grains['os_family'] = 'Debian' %}
+{% if grains['os_family'] == 'Debian' %}
 check_mk-deb-present:
   file.managed:
     - source: salt://check_mk_agent/files/deb/check-mk-agent_1.4.0p24-1_all.deb
@@ -37,7 +37,7 @@ dpkg -i /var/cache/apt/archives/check-mk-agent_1.4.0b2-1_all.deb:
     - source: salt://check_mk_agent/files/plugins/check_reboot
     - mode: 755
 
-{% elseif grains['os_family'] = 'RedHat' %}
+{% elseif grains['os_family'] == 'RedHat' %}
 
 check_mk-rpm-present:
     file.managed:
