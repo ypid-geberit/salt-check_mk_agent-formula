@@ -11,12 +11,12 @@ xinetd:
 {% if grains['os_family'] == 'Debian' %}
 check_mk-deb-present:
   file.managed:
-    - source: salt://check_mk_agent/files/deb/check-mk-agent_1.4.0p24-1_all.deb
-    - name: /var/cache/apt/archives/check-mk-agent_1.4.0p24-1_all.deb
+    - source: salt://check_mk_agent/files/deb/check-mk-agent_1.5.0p1-1_all.deb
+    - name: /var/cache/apt/archives/check-mk-agent_1.5.0p1-1_all.deb
 
-dpkg -i /var/cache/apt/archives/check-mk-agent_1.4.0b2-1_all.deb:
+dpkg -i /var/cache/apt/archives/check-mk-agent_1.5.0p1-1_all.deb
   cmd.run:
-    - name: dpkg -i /var/cache/apt/archives/check-mk-agent_1.4.0p24-1_all.deb
+    - name: dpkg -i /var/cache/apt/archives/check-mk-agent_1.5.0p1-1_all.deb
     - require:
       - file: check_mk-deb-present
     - onchanges:
