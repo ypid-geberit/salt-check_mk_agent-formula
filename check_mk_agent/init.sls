@@ -16,7 +16,7 @@ check_mk-deb-present:
     - name: /var/cache/apt/archives/check-mk-agent_1.4.0p33-1_all.deb
     {% else %}
     - source: salt://check_mk_agent/files/deb/check-mk-agent_1.5.0p9-1_all.deb
-    - name: /var/cache/apt/archives/check-mk-agent_1.5.0p2-1_all.deb
+    - name: /var/cache/apt/archives/check-mk-agent_1.5.0p9-1_all.deb
     {% endif %}
    
 
