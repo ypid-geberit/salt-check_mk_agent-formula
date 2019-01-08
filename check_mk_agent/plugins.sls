@@ -146,12 +146,29 @@ installSwitch:
 {% if salt['pillar.get']('check_mk_agent:plugins:apt') %}
 
 /usr/lib/check_mk_agent/plugins/3600/mk_apt:
-   file.managed:
-     - source: salt://check_mk_agent/files/plugins/mk_apt
-     - mode: 755
-     - makedirs: True
-     - dir_mode: 755
+  file.managed:
+    - source: salt://check_mk_agent/files/plugins/mk_apt
+    - mode: 755
+    - makedirs: True
+    - dir_mode: 755
 
 {% endif %}
 
 
+{% if salt['pillar.get']('check_mk_agent:plugins:docker') %}
+
+/usr/lib/check_mk_agent/plugins/3600/mk_docker_node:
+  file.managed:
+    - source: salt://check_mk_agent/files/plugins/mk_docker_node
+    - mode: 755
+    - makedirs: True
+    - dir_mode: 755
+
+/usr/lib/check_mk_agent/plugins/3600/mk_docker_piggyback:
+  file.managed:
+    - source: salt://check_mk_agent/files/plugins/mk_docker_piggyback
+    - mode: 755
+    - makedirs: True
+    - dir_mode: 755
+
+{% endif %}
