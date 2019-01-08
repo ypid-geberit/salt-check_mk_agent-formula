@@ -11,24 +11,15 @@ xinetd:
 {% if grains['os_family'] == 'Debian' %}
 check_mk-deb-present:
   file.managed:
-    {% if salt['pillar.get']('check_mk_agent:k8s') %}  
-    - source: salt://check_mk_agent/files/deb/check-mk-agent_1.4.0p33-1_all.deb
-    - name: /var/cache/apt/archives/check-mk-agent_1.4.0p33-1_all.deb
-    {% else %}
     - source: salt://check_mk_agent/files/deb/check-mk-agent_2019.01.04-1_all.deb
     - name: /var/cache/apt/archives/check-mk-agent_2019.01.04-1_all.deb
-    {% endif %}
+
    
 
 install-cmk-agent:
   cmd.run:
-    {% if salt['pillar.get']('check_mk_agent:k8s') %}
-    - name: dpkg -i /var/cache/apt/archives/check-mk-agent_1.4.0p33-1_all.deb
-    {% else %}
     - name: dpkg -i /var/cache/apt/archives/check-mk-agent_2019.01.04-1_all.deb
-    {% endif %}
-    - require:
-      - file: check_mk-deb-present
+    - file: check_mk-deb-present
     - onchanges:
       - file: check_mk-deb-present
     
