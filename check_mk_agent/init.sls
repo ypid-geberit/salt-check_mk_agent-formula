@@ -11,14 +11,14 @@ xinetd:
 {% if grains['os_family'] == 'Debian' %}
 check_mk-deb-present:
   file.managed:
-    - source: salt://check_mk_agent/files/deb/check-mk-agent_2019.01.04-1_all.deb
-    - name: /var/cache/apt/archives/check-mk-agent_2019.01.04-1_all.deb
+    - source: salt://check_mk_agent/files/deb/check-mk-agent_2019.01.09-1_all.deb
+    - name: /var/cache/apt/archives/check-mk-agent_2019.01.09-1_all.deb
 
    
 
 install-cmk-agent:
   cmd.run:
-    - name: dpkg -i /var/cache/apt/archives/check-mk-agent_2019.01.04-1_all.deb
+    - name: dpkg -i /var/cache/apt/archives/check-mk-agent_2019.01.09-1_all.deb
     - file: check_mk-deb-present
     - onchanges:
       - file: check_mk-deb-present

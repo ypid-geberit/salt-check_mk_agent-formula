@@ -57,19 +57,6 @@
 
 {% endif %}
 
-{% if salt['pillar.get']('check_mk_agent:plugins:haproxy') %}
-
-/usr/lib/check_mk_agent/local/haproxy.py:
-  file.managed:
-    - source: salt://check_mk_agent/files/plugins/haproxy.py
-    - mode: 755
-
-/usr/lib/check_mk_agent/local/haproxychecks.py:
-  file.managed:
-    - source: salt://check_mk_agent/files/plugins/haproxychecks.py
-    - mode: 755
-
-{% endif %}
 
 {% if salt['pillar.get']('check_mk_agent:plugins:postgres') %}
 
