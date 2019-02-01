@@ -62,7 +62,7 @@
 ###### its managed by saltstack
 
 {% set logwatch_list = salt['pillar.get']('check_mk_agent:plugins:logwatch', []) %}
-{%- for logwatchpath in logwatch_list %}
+{%- for logwatchpath, logwatchregex in logwatch_list.items %}
 {{ logwatchpath }}
 {%- for logwatchregex in logwatchpath.items() %}
  {{ logwatchregex }}
