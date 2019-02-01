@@ -159,3 +159,18 @@ installSwitch:
     - dir_mode: 755
 
 {% endif %}
+
+{% if salt['pillar.get']('check_mk_agent:plugins:logwatch') %}
+
+/usr/lib/check_mk_agent/plugins/mk_logwatch:
+  file.managed:
+    - source: salt://check_mk_agent/files/plugins/mk_logwatch
+    - mode: 755
+
+/etc/check_mk/logwatch.cfg:
+  file.managed:
+    - source: salt:://check_mk_agent/files/cfg/logwatch.jinja
+    - mode: 644
+    - template: jinja
+
+{% endif %}
