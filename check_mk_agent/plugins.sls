@@ -169,7 +169,7 @@ installSwitch:
 
 /etc/check_mk/logwatch.cfg:
   file.managed:
-    - source: salt:://check_mk_agent/files/cfg/logwatch.jinja
+    - source: salt://check_mk_agent/files/cfg/logwatch.jinja
     - mode: 644
     - template: jinja
 
