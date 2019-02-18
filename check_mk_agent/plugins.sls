@@ -145,18 +145,26 @@ installSwitch:
 {% if salt['pillar.get']('check_mk_agent:plugins:docker') %}
 
 /usr/lib/check_mk_agent/plugins/3600/mk_docker_node:
-  file.managed:
-    - source: salt://check_mk_agent/files/plugins/mk_docker_node
-    - mode: 755
-    - makedirs: True
-    - dir_mode: 755
+  file.absent
+
 
 /usr/lib/check_mk_agent/plugins/3600/mk_docker_piggyback:
+  file.absent
+
+docker-py:
+  pip.installed:
+    - require:
+      - pkg: python-pip
+
+/usr/lib/check_mk_agent/plugins/3600/mk_docker.py:
   file.managed:
-    - source: salt://check_mk_agent/files/plugins/mk_docker_piggyback
+    - source: salt://check_mk_agent/files/plugins/mk_docker.py
     - mode: 755
     - makedirs: True
     - dir_mode: 755
+    - require: 
+       - docker-py
+
 
 {% endif %}
 
