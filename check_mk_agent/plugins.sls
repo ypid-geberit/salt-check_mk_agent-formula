@@ -151,6 +151,9 @@ installSwitch:
 /usr/lib/check_mk_agent/plugins/3600/mk_docker_piggyback:
   file.absent
 
+python-pip:
+  pkg.installed
+
 docker-py:
   pip.installed:
     - require:
