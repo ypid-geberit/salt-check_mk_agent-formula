@@ -154,7 +154,7 @@ installSwitch:
 python-pip:
   pkg.installed
 
-docker-py:
+docker:
   pip.installed:
     - require:
       - pkg: python-pip
