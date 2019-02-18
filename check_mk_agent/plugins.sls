@@ -166,7 +166,7 @@ docker:
     - makedirs: True
     - dir_mode: 755
     - require: 
-       - docker-py
+       - docker
 
 
 {% endif %}
