@@ -67,6 +67,15 @@
 
 {% endif %}
 
+{% if salt['pillar.get']('check_mk_agent:plugins:nfsperf') %}
+
+/usr/lib/check_mk_agent/plugins/nfsperf:
+  file.managed:
+    - source: salt://check_mk_agent/files/plugins/nfsperf
+    - mode: 755
+
+{% endif %}
+
 {% if salt['pillar.get']('check_mk_agent:plugins:supervisor') %}
 
 install-sensu-supervisor-gem:
@@ -165,7 +174,7 @@ docker:
     - mode: 755
     - makedirs: True
     - dir_mode: 755
-    - require: 
+    - require:
        - docker
 
 
