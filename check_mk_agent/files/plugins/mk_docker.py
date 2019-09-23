@@ -31,13 +31,13 @@ At 'agents/cfg_examples/mk_docker.cfg' (relative to the check_mk
 source code directory ) you should find some example configuration
 files. For more information on possible configurations refer to the
 file docker.cfg in said directory.
-The docker-py library must be installed on the system executing the
+The docker library must be installed on the system executing the
 plugin ("pip install docker").
 
 This plugin it will be called by the agent without any arguments.
 """
 # N O T E:
-# docker-py is available for python verisons from 2.6 / 3.3
+# docker is available for python versions from 2.6 / 3.3
 
 import os
 import sys
@@ -46,12 +46,12 @@ import json
 import struct
 import argparse
 import functools
-import subprocess
+import multiprocessing
 import logging
 
 try:
     import ConfigParser as configparser
-except NameError:  # Python3
+except ImportError:  # Python3
     import configparser
 
 try:
@@ -63,6 +63,13 @@ except ImportError:
                      ' Please install it on the monitored system (pip install docker)."}\n')
     sys.exit(1)
 
+if int(docker.__version__.split('.')[0]) < 2:
+    sys.stdout.write('<<<docker_node_info:sep(124)>>>\n'
+                     '@docker_version_info|{}\n'
+                     '{"Critical": "Error: mk_docker requires the docker library >= 2.0.0.'
+                     ' Please install it on the monitored system (pip install docker)."}\n')
+    sys.exit(1)
+
 DEBUG = "--debug" in sys.argv[1:]
 
 VERSION = "0.1"
@@ -71,8 +78,8 @@ DEFAULT_CFG_FILE = os.path.join(os.getenv('MK_CONFDIR', ''), "docker.cfg")
 
 DEFAULT_CFG_SECTION = {
     "base_url": "unix://var/run/docker.sock",
-    "api_version": "auto",
     "skip_sections": "",
+    "container_id": "short",
 }
 
 LOGGER = logging.getLogger(__name__)
@@ -84,19 +91,18 @@ def parse_arguments(argv=None):
 
     prog, descr, epilog = __doc__.split('\n\n')
     parser = argparse.ArgumentParser(prog=prog, description=descr, epilog=epilog)
-    parser.add_argument(
-        "--debug", action="store_true", help='''Debug mode: raise Python exceptions''')
-    parser.add_argument(
-        "-v",
-        "--verbose",
-        action="count",
-        default=0,
-        help='''Verbose mode (for even more output use -vvv)''')
-    parser.add_argument(
-        "-c",
-        "--config-file",
-        default=DEFAULT_CFG_FILE,
-        help='''Read config file (default: $MK_CONFDIR/docker.cfg)''')
+    parser.add_argument("--debug",
+                        action="store_true",
+                        help='''Debug mode: raise Python exceptions''')
+    parser.add_argument("-v",
+                        "--verbose",
+                        action="count",
+                        default=0,
+                        help='''Verbose mode (for even more output use -vvv)''')
+    parser.add_argument("-c",
+                        "--config-file",
+                        default=DEFAULT_CFG_FILE,
+                        help='''Read config file (default: $MK_CONFDIR/docker.cfg)''')
 
     args = parser.parse_args(argv)
 
@@ -120,11 +126,18 @@ def get_config(cfg_file):
     files_read = config.read(cfg_file)
     LOGGER.info("read configration file(s): %r", files_read)
     section_name = "DOCKER" if config.sections() else "DEFAULT"
-    return dict(config.items(section_name))
+    conf_dict = dict(config.items(section_name))
+
+    skip_list = conf_dict.get("skip_sections", "").split(',')
+    conf_dict["skip_sections"] = tuple(n.strip() for n in skip_list)
+
+    return conf_dict
 
 
 class Section(list):
     '''a very basic agent section class'''
+    _OUTPUT_LOCK = multiprocessing.Lock()
+
     version_info = {
         'PluginVersion': VERSION,
         'DockerPyVersion': docker.version,
@@ -145,39 +158,55 @@ class Section(list):
     def write(self):
         if self[0].startswith('<<<<'):
             self.append('<<<<>>>>')
-        for line in self:
-            sys.stdout.write("%s\n" % line)
+        with self._OUTPUT_LOCK:
+            for line in self:
+                sys.stdout.write("%s\n" % line)
+            sys.stdout.flush()
 
 
-def report_exception_to_server(exc):
+def report_exception_to_server(exc, location):
     LOGGER.info("handling exception: %s", exc)
+    msg = "Plugin exception in %s: %s" % (location, exc)
     sec = Section('node_info')
-    sec.append(json.dumps({"PluginException": str(exc)}))
+    sec.append(json.dumps({"Unknown": msg}))
     sec.write()
 
 
 class MKDockerClient(docker.DockerClient):
     '''a docker.DockerClient that caches containers and node info'''
+    API_VERSION = "auto"
+    _DEVICE_MAP_LOCK = multiprocessing.Lock()
 
-    def __init__(self, *args, **kwargs):
-        super(MKDockerClient, self).__init__(*args, **kwargs)
-        self.all_containers = self.containers.list(all=True)
+    def __init__(self, config):
+        super(MKDockerClient, self).__init__(config['base_url'], version=MKDockerClient.API_VERSION)
+        all_containers = self.containers.list(all=True)
+        if config['container_id'] == "name":
+            self.all_containers = {c.attrs["Name"].lstrip('/'): c for c in all_containers}
+        elif config['container_id'] == "long":
+            self.all_containers = {c.attrs["Id"]: c for c in all_containers}
+        else:
+            self.all_containers = {c.attrs["Id"][:12]: c for c in all_containers}
+        self._env = {"REMOTE": os.getenv("REMOTE", "")}
+        self._container_stats = {}
+        self._device_map = None
         self.node_info = self.info()
 
+    def device_map(self):
+        with self._DEVICE_MAP_LOCK:
+            if self._device_map is not None:
+                return self._device_map
 
-class AgentDispatcher(object):
-    '''AgentDispatcher is responsible for running a check_mk_agent inside a container
+            self._device_map = {}
+            for device in os.listdir('/sys/block'):
+                with open('/sys/block/%s/dev' % device) as handle:
+                    self._device_map[handle.read().strip()] = device
 
-    If the check_mk agent is installed in the countainer, run it.
-    Otherwise execute the agent of the node in the context of the container.
-    Using this approach we should always get at least basic information from
-    the container.
-    Once it comes to plugins and custom configuration the user needs to use
-    a little more complex setup. Have a look at the documentation.
-    '''
+        return self._device_map
 
     @staticmethod
     def iter_socket(sock, descriptor):
+        '''iterator to recv data from container socket
+        '''
         header = sock.recv(8)
         while header:
             actual_descriptor, length = struct.unpack('>BxxxL', header)
@@ -190,6 +219,8 @@ class AgentDispatcher(object):
             header = sock.recv(8)
 
     def get_stdout(self, exec_return_val):
+        '''read stdout from container process
+        '''
         if isinstance(exec_return_val, tuple):
             # it's a tuple since version 3.0.0
             exit_code, sock = exec_return_val
@@ -200,67 +231,28 @@ class AgentDispatcher(object):
 
         return ''.join(self.iter_socket(sock, 1))
 
-    def __init__(self):
-        remote = os.getenv("REMOTE", "")
-        self.env = {"REMOTE": remote}
-        self.env_from_node = {"REMOTE": remote, "MK_FROM_NODE": "1"}
-        self._agent_code = None
-        self.agent_code_exc = None
+    def run_agent(self, container):
+        '''run checkmk agent in container'''
+        result = container.exec_run(['check_mk_agent'], environment=self._env, socket=True)
+        return self.get_stdout(result)
 
-    def _read_agent_code(self):
-        LOGGER.debug("reading agent code")
+    def get_container_stats(self, container_key):
+        '''return cached container stats'''
         try:
-            agent_file = subprocess.check_output(['which', 'check_mk_agent']).strip()
-            LOGGER.debug("source file: %s", agent_file)
-            source = open(agent_file).read()
-            self._agent_code = source + "\nexit\n"
-        except () if DEBUG else (subprocess.CalledProcessError, IOError) as exc:
-            self.agent_code_exc = exc
+            return self._container_stats[container_key]
+        except KeyError:
+            pass
 
-    @property
-    def agent_code(self):
-        if self._agent_code is None and self.agent_code_exc is None:
-            self._read_agent_code()
-        return self._agent_code
+        container = self.all_containers[container_key]
+        if not container.status == "running":
+            return self._container_stats.setdefault(container_key, None)
 
-    def check_container(self, container):
-        '''run check_mk agent in container or container context'''
-
-        LOGGER.debug("trying to run containers check_mk_agent")
-        result = container.exec_run(['sh', '-c', 'check_mk_agent'],
-                                    environment=self.env,
-                                    socket=True)
-        output = self.get_stdout(result)
-        if output:
-            LOGGER.info("successfully ran containers check_mk_agent")
-            return output
-        LOGGER.info("container has no agent or executing agent failed")
-
-        # check for agent code and bash:
-        if not self.agent_code:
-            LOGGER.info("failed to load agent code: %s", self.agent_code_exc)
-            return None
-        result = container.exec_run(['sh', '-c', 'bash -c echo'], socket=True)
-        if not self.get_stdout(result):
-            LOGGER.info("failed to run bash in container: %s", container.short_id)
-            return None
-
-        result = container.exec_run(
-            'bash', environment=self.env_from_node, socket=True, stdin=True, stderr=False)
-        try:
-            nbytes = result.sendall(self.agent_code)
-        except AttributeError:
-            # it's a tuple since version 3.0.0
-            nbytes = result[1].sendall(self.agent_code)
-        LOGGER.debug("sent agent to container (%d bytes)", nbytes)
-        agent_ouput = self.get_stdout(result)
-        LOGGER.info("successfully ran check_mk_agent that was sent to container")
-        return agent_ouput
+        stats = container.stats(stream=False)
+        return self._container_stats.setdefault(container_key, stats)
 
 
 def time_it(func):
     '''Decorator to time the function'''
-
     @functools.wraps(func)
     def wrapped(*args, **kwargs):
         before = time.time()
@@ -279,15 +271,6 @@ def set_version_info(client):
     Section.version_info['ApiVersion'] = data.get('ApiVersion')
 
 
-def short_id(container):
-    '''return a shortened id
-
-    We do not use container.short_id for compatibility reasons.
-    Also we are dealing with trust issues.
-    '''
-    return container.attrs["Id"][:12]
-
-
 #.
 #   .--Sections------------------------------------------------------------.
 #   |                  ____            _   _                               |
@@ -301,23 +284,16 @@ def short_id(container):
 #   '----------------------------------------------------------------------'
 
 
-def skippable(section):
-    '''Decorator to skip the section, if configured to do so'''
-
-    @functools.wraps(section)
-    def wrapped(client, config):
-        section_name = section.func_name.replace('section_', 'docker_')
-        skip_sections = [name.strip() for name in config.get("skip_sections", "").split(',')]
-        if section_name in skip_sections:
-            LOGGER.info("skipped section: %s", section_name)
-            return None
-        return section(client, config)
-
-    return wrapped
+def is_disabled_section(config, section_name):
+    '''Skip the section, if configured to do so'''
+    if section_name in config["skip_sections"]:
+        LOGGER.info("skipped section: %s", section_name)
+        return True
+    return False
 
 
 @time_it
-def section_node_info(client, _config):
+def section_node_info(client):
     LOGGER.debug(client.node_info)
     section = Section('node_info')
     section.append(json.dumps(client.node_info))
@@ -325,12 +301,16 @@ def section_node_info(client, _config):
 
 
 @time_it
-@skippable
-def section_node_disk_usage(client, _config):
+def section_node_disk_usage(client):
     '''docker system df'''
-    data = client.df()
-    LOGGER.debug(data)
     section = Section('node_disk_usage')
+    try:
+        data = client.df()
+    except () if DEBUG else docker.errors.APIError as exc:
+        section.write()
+        LOGGER.exception(exc)
+        return
+    LOGGER.debug(data)
 
     def get_row(type_, instances, is_inactive, key='Size'):
         inactive = [i for i in instances if is_inactive(i)]
@@ -368,8 +348,7 @@ def section_node_disk_usage(client, _config):
 
 
 @time_it
-@skippable
-def section_node_images(client, _config):
+def section_node_images(client):
     '''in subsections list [[[images]]] and [[[containers]]]'''
     section = Section('node_images')
 
@@ -381,71 +360,180 @@ def section_node_images(client, _config):
 
     LOGGER.debug(client.all_containers)
     section.append('[[[containers]]]')
-    for container in client.all_containers:
+    for container in client.all_containers.itervalues():
         section.append(json.dumps(container.attrs))
 
     section.write()
 
 
 @time_it
-@skippable
-def section_node_network(client, _config):
+def section_node_network(client):
     networks = client.networks.list(filters={'driver': 'bridge'})
     section = Section('node_network')
     section += [json.dumps(n.attrs) for n in networks]
     section.write()
 
 
-@time_it
-@skippable
-def section_container_client(client, _config):
-
+def section_container_node_name(client, container_id):
     node_name = client.node_info.get("Name")
-
-    # For the container status, we want information about *all* containers
-    for container in client.all_containers:
-        container_id = short_id(container)
-        LOGGER.info("container (via client): %s", container_id)
-
-        section = Section('container_node_name', piggytarget=container_id)
-        section.append(json.dumps({"NodeName": node_name}))
-        section += Section('container_status')
-        section.append(json.dumps(container.attrs.get("State", {})))
-        section += Section('container_labels')
-        section.append(json.dumps(container.labels))
-        section += Section('container_network')
-        section.append(json.dumps(container.attrs.get("NetworkSettings", {})))
-        section.write()
+    section = Section('container_node_name', piggytarget=container_id)
+    section.append(json.dumps({"NodeName": node_name}))
+    section.write()
 
 
-@time_it
-@skippable
-def section_container_agent(client, _config):
+def section_container_status(client, container_id):
+    container = client.all_containers[container_id]
+    status = container.attrs.get("State", {})
 
-    running_containers = [c for c in client.all_containers if c.status == "running"]
-    if not running_containers:
+    healthcheck = container.attrs.get("Config", {}).get("Healthcheck")
+    if healthcheck:
+        status["Healthcheck"] = healthcheck
+    restart_policy = container.attrs.get("HostConfig", {}).get("RestartPolicy")
+    if restart_policy:
+        status["RestartPolicy"] = restart_policy
+
+    try:
+        status["ImageTags"] = container.image.tags
+    except docker.errors.ImageNotFound:
+        # image has been removed while container is still running
+        pass
+    status["NodeName"] = client.node_info.get("Name")
+
+    section = Section('container_status', piggytarget=container_id)
+    section.append(json.dumps(status))
+    section.write()
+
+
+def section_container_labels(client, container_id):
+    container = client.all_containers[container_id]
+    section = Section('container_labels', piggytarget=container_id)
+    section.append(json.dumps(container.labels))
+    section.write()
+
+
+def section_container_network(client, container_id):
+    container = client.all_containers[container_id]
+    network = container.attrs.get("NetworkSettings", {})
+    section = Section('container_network', piggytarget=container_id)
+    section.append(json.dumps(network))
+    section.write()
+
+
+def section_container_agent(client, container_id):
+    container = client.all_containers[container_id]
+    if container.status != "running":
+        return True
+    result = client.run_agent(container)
+    success = '<<<check_mk>>>' in result
+    LOGGER.debug("running containers check_mk_agent: %s", 'ok' if success else 'failed')
+    section = Section(piggytarget=container_id)
+    section.append(result)
+    section.write()
+    return success
+
+
+def section_container_mem(client, container_id):
+    stats = client.get_container_stats(container_id)
+    if stats is None:  # container not running
+        return
+    container_mem = stats["memory_stats"]
+    section = Section('container_mem', piggytarget=container_id)
+    section.append(json.dumps(container_mem))
+    section.write()
+
+
+def section_container_cpu(client, container_id):
+    stats = client.get_container_stats(container_id)
+    if stats is None:  # container not running
+        return
+    container_cpu = stats["cpu_stats"]
+    section = Section('container_cpu', piggytarget=container_id)
+    section.append(json.dumps(container_cpu))
+    section.write()
+
+
+def section_container_diskstat(client, container_id):
+    stats = client.get_container_stats(container_id)
+    if stats is None:  # container not running
+        return
+    container_blkio = stats["blkio_stats"]
+    container_blkio["time"] = time.time()
+    container_blkio["names"] = client.device_map()
+    section = Section('container_diskstat', piggytarget=container_id)
+    section.append(json.dumps(container_blkio))
+    section.write()
+
+
+NODE_SECTIONS = (
+    ('docker_node_info', section_node_info),
+    ('docker_node_disk_usage', section_node_disk_usage),
+    ('docker_node_images', section_node_images),
+    ('docker_node_network', section_node_network),
+)
+
+CONTAINER_API_SECTIONS = (
+    ('docker_container_node_name', section_container_node_name),
+    ('docker_container_status', section_container_status),
+    ('docker_container_labels', section_container_labels),
+    ('docker_container_network', section_container_network),
+)
+
+CONTAINER_API_SECTIONS_NO_AGENT = (
+    ('docker_container_mem', section_container_mem),
+    ('docker_container_cpu', section_container_cpu),
+    ('docker_container_diskstat', section_container_diskstat),
+)
+
+
+def call_node_sections(client, config):
+    for name, section in NODE_SECTIONS:
+        if is_disabled_section(config, name):
+            continue
+        try:
+            section(client)
+        except () if DEBUG else Exception as exc:
+            report_exception_to_server(exc, section.func_name)
+
+
+def call_container_sections(client, config):
+    jobs = []
+    for container_id in client.all_containers:
+        job = multiprocessing.Process(target=_call_single_containers_sections,
+                                      args=(client, config, container_id))
+        job.start()
+        jobs.append(job)
+
+    for job in jobs:
+        job.join()
+
+
+def _call_single_containers_sections(client, config, container_id):
+    LOGGER.info("container id: %s", container_id)
+    for name, section in CONTAINER_API_SECTIONS:
+        if is_disabled_section(config, name):
+            continue
+        try:
+            section(client, container_id)
+        except () if DEBUG else Exception as exc:
+            report_exception_to_server(exc, section.func_name)
+
+    agent_success = False
+    if not is_disabled_section(config, 'docker_container_agent'):
+        try:
+            agent_success = section_container_agent(client, container_id)
+        except () if DEBUG else Exception as exc:
+            report_exception_to_server(exc, "section_container_agent")
+    if agent_success:
         return
 
-    dispatcher = AgentDispatcher()
-    for container in running_containers:
-        container_id = short_id(container)
-        LOGGER.info("container(via agent): %s", container_id)
+    for name, section in CONTAINER_API_SECTIONS_NO_AGENT:
+        if is_disabled_section(config, name):
+            continue
+        try:
+            section(client, container_id)
+        except () if DEBUG else Exception as exc:
+            report_exception_to_server(exc, section.func_name)
 
-        result = dispatcher.check_container(container)
-        if result:
-            section = Section(piggytarget=container_id)
-            section.append(result)
-            section.write()
-
-
-SECTION_FUNCTIONS = (
-    section_node_info,
-    section_node_disk_usage,
-    section_node_images,
-    section_node_network,
-    section_container_client,
-    section_container_agent,
-)
 
 #.
 #   .--Main----------------------------------------------------------------.
@@ -466,18 +554,16 @@ def main():
     config = get_config(args.config_file)
 
     try:  # first calls by docker-daemon: report failure
-        client = MKDockerClient(config['base_url'], version=config['api_version'])
+        client = MKDockerClient(config)
     except () if DEBUG else Exception as exc:
-        report_exception_to_server(exc)
+        report_exception_to_server(exc, "MKDockerClient.__init__")
         sys.exit(1)
 
     set_version_info(client)
 
-    for section in SECTION_FUNCTIONS:
-        try:
-            section(client, config)
-        except () if DEBUG else Exception as exc:
-            LOGGER.info("caught exception: %s", exc)
+    call_node_sections(client, config)
+
+    call_container_sections(client, config)
 
 
 if __name__ == "__main__":

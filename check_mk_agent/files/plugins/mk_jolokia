@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # -*- encoding: utf-8; py-indent-offset: 4 -*-
 # +------------------------------------------------------------------+
 # |             ____ _               _        __  __ _  __           |
@@ -24,70 +24,58 @@
 # to the Free Software Foundation, Inc., 51 Franklin St,  Fifth Floor,
 # Boston, MA 02110-1301 USA.
 
-import base64
 import os
 import socket
-import ssl
 import sys
 import urllib2
-import copy
-from httplib import HTTPConnection, HTTPSConnection
 
 try:
-    from simplejson import json
-except ImportError:
     try:
-        import json
+        from simplejson import json
     except ImportError:
-        sys.stdout.write("<<<jolokia_info>>>\n")
-        sys.stdout.write(
-            "Error: Missing JSON library for Agent Plugin mk_jolokia\n")
-        exit()
+        import json
+except ImportError as import_error:
+    sys.stdout.write(
+        "<<<jolokia_info>>>\n"
+        "Error: mk_jolokia requires either the json or simplejson library."
+        " Please either use a Python version that contains the json library or install the"
+        " simplejson library on the monitored system.\n")
+    sys.exit(1)
 
-VERBOSE = '--verbose' in sys.argv
-DEBUG = '--debug' in sys.argv
+try:
+    import requests
+    from requests.auth import HTTPDigestAuth
+    from requests.packages import urllib3
+except ImportError as import_error:
+    sys.stdout.write("<<<jolokia_info>>>\n"
+                     "Error: mk_jolokia requires the requests library."
+                     " Please install it on the monitored system.\n")
+    sys.exit(1)
 
-DEFAULT_CONFIG = {
-    # Default global configuration values
-    "protocol": "http",
-    "server": "localhost",
-    "port": 8080,
-    "user": "monitoring",
-    "password": None,
-    "mode": "digest",
-    "suburi": "jolokia",
-    "instance": None,
-    "cert_path": None,
-    "client_cert": None,
-    "client_key": None,
-    "service_url": None,
-    "service_user": None,
-    "service_password": None,
-    "product": None,
-    "custom_vars": [],
-    # List of instances to monitor. Each instance is a dict where
-    # the global configuration values can be overridden.
-    "instances": [{}],
+VERBOSE = sys.argv.count('--verbose') + sys.argv.count('-v') + 2 * sys.argv.count('-vv')
+DEBUG = sys.argv.count('--debug')
+
+MBEAN_SECTIONS = {
+    'jvm_threading': ("java.lang:type=Threading",),
 }
 
-QUERY_SPECS_GENERIC = [
-    ("java.lang:type=Memory", "NonHeapMemoryUsage/used",
-     "NonHeapMemoryUsage", [], False),
+MBEAN_SECTIONS_SPECIFIC = {
+    'tomcat': {
+        'jvm_threading':
+            ("*:name=*,type=ThreadPool/maxThreads,currentThreadCount,currentThreadsBusy/",),
+    },
+}
+
+QUERY_SPECS_LEGACY = [
+    ("java.lang:type=Memory", "NonHeapMemoryUsage/used", "NonHeapMemoryUsage", [], False),
     ("java.lang:type=Memory", "NonHeapMemoryUsage/max", "NonHeapMemoryMax", [], False),
     ("java.lang:type=Memory", "HeapMemoryUsage/used", "HeapMemoryUsage", [], False),
     ("java.lang:type=Memory", "HeapMemoryUsage/max", "HeapMemoryMax", [], False),
-    ("java.lang:type=Threading", "ThreadCount", "ThreadCount", [], False),
-    ("java.lang:type=Threading", "DaemonThreadCount", "DeamonThreadCount", [], False),
-    ("java.lang:type=Threading", "PeakThreadCount", "PeakThreadCount", [], False),
-    ("java.lang:type=Threading", "TotalStartedThreadCount",
-     "TotalStartedThreadCount", [], False),
     ("java.lang:type=Runtime", "Uptime", "Uptime", [], False),
     ("java.lang:type=GarbageCollector,name=*", "CollectionCount", "", [], False),
     ("java.lang:type=GarbageCollector,name=*", "CollectionTime", "", [], False),
-    ("java.lang:name=CMS%20Perm%20Gen,type=MemoryPool",
-     "Usage/used", "PermGenUsage", [], False),
-    ("java.lang:name=CMS%20Perm%20Gen,type=MemoryPool",
-     "Usage/max", "PermGenMax", [], False),
+    ("java.lang:name=CMS%20Perm%20Gen,type=MemoryPool", "Usage/used", "PermGenUsage", [], False),
+    ("java.lang:name=CMS%20Perm%20Gen,type=MemoryPool", "Usage/max", "PermGenMax", [], False),
     ("net.sf.ehcache:CacheManager=CacheManagerApplication*,*,type=CacheStatistics", "OffHeapHits",
      "", [], True),
     ("net.sf.ehcache:CacheManager=CacheManagerApplication*,*,type=CacheStatistics", "OnDiskHits",
@@ -130,114 +118,70 @@ QUERY_SPECS_GENERIC = [
      [], True),
 ]
 
-QUERY_SPECS_SPECIFIC = {
+QUERY_SPECS_SPECIFIC_LEGACY = {
     "weblogic": [
         ("*:*", "CompletedRequestCount", None, ["ServerRuntime"], False),
         ("*:*", "QueueLength", None, ["ServerRuntime"], False),
         ("*:*", "StandbyThreadCount", None, ["ServerRuntime"], False),
         ("*:*", "PendingUserRequestCount", None, ["ServerRuntime"], False),
-        ("*:Name=ThreadPoolRuntime,*", "ExecuteThreadTotalCount",
-         None, ["ServerRuntime"], False),
+        ("*:Name=ThreadPoolRuntime,*", "ExecuteThreadTotalCount", None, ["ServerRuntime"], False),
         ("*:*", "ExecuteThreadIdleCount", None, ["ServerRuntime"], False),
         ("*:*", "HoggingThreadCount", None, ["ServerRuntime"], False),
         ("*:Type=WebAppComponentRuntime,*", "OpenSessionsCurrentCount", None,
          ["ServerRuntime", "ApplicationRuntime"], False),
     ],
     "tomcat": [
-        ("*:type=Manager,*", "activeSessions,maxActiveSessions",
-         None, ["path", "context"], False),
-        ("*:j2eeType=Servlet,name=default,*",
-         "stateName", None, ["WebModule"], False),
+        ("*:type=Manager,*", "activeSessions,maxActiveSessions", None, ["path", "context"], False),
+        ("*:j2eeType=Servlet,name=default,*", "stateName", None, ["WebModule"], False),
         # Check not yet working
-        ("*:j2eeType=Servlet,name=default,*",
-         "requestCount", None, ["WebModule"], False),
-        ("*:name=*,type=ThreadPool", "maxThreads", None, [], False),
-        ("*:name=*,type=ThreadPool", "currentThreadCount", None, [], False),
-        ("*:name=*,type=ThreadPool", "currentThreadsBusy", None, [], False),
+        ("*:j2eeType=Servlet,name=default,*", "requestCount", None, ["WebModule"], False),
         # too wide location for addressing the right info
         # ( "*:j2eeType=Servlet,*", "requestCount", None, [ "WebModule" ] , False),
     ],
-    "jboss": [("*:type=Manager,*", "activeSessions,maxActiveSessions", None, ["path", "context"],
-               False), ],
+    "jboss": [("*:type=Manager,*", "activeSessions,maxActiveSessions", None, ["path",
+                                                                              "context"], False),],
 }
 
-#   ('*:j2eeType=WebModule,name=/--/localhost/-/%(app)s,*/state', None, [ "name" ]),
-#   ('*:j2eeType=Servlet,WebModule=/--/localhost/-/%(app)s,name=%(servlet)s,*/requestCount',
-#    None, [ "WebModule", "name" ]),
-#   ("Catalina:J2EEApplication=none,J2EEServer=none,WebModule=*,j2eeType=Servlet,name=*",
-#    None, [ "WebModule", "name" ]),
+AVAILABLE_PRODUCTS = sorted(set(QUERY_SPECS_SPECIFIC_LEGACY.keys() +
+                                MBEAN_SECTIONS_SPECIFIC.keys()))
 
-# We have to deal with socket timeouts. Python > 2.6
-# supports timeout parameter for the urllib2.urlopen method
-# but we are on a python 2.5 system here which seem to use the
-# default socket timeout. We are local here so  set it to 1 second.
-socket.setdefaulttimeout(1.0)
+# Default global configuration: key, value [, help]
+DEFAULT_CONFIG_TUPLES = (
+    ("protocol", "http", "Protocol to use (http/https)."),
+    ("server", "localhost", "Host name or IP address of the Jolokia server."),
+    ("port", 8080, "TCP Port of the Jolokia server."),
+    ("suburi", "jolokia", "Path-component of the URI to query."),
+    ("user", "monitoring", "Username to use for connecting."),
+    ("password", None, "Password to use for connecting."),
+    ("mode", "digest", "Authentication mode. Can be \"basic\", \"digest\" or \"https\"."),
+    ("instance", None, "Name of the instance in the monitoring. Defaults to port."),
+    ("verify", None),
+    ("client_cert", None, "Path to client cert for https authentication."),
+    ("client_key", None, "Client cert secret for https authentication."),
+    ("service_url", None),
+    ("service_user", None),
+    ("service_password", None),
+    ("product", None, "Product description. Available: %s. If not provided," \
+                      " we try to detect the product from the jolokia info section." % \
+                      ", ".join(AVAILABLE_PRODUCTS)),
+    ("timeout", 1.0, "Connection/read timeout for requests."),
+    ("custom_vars", []),
+    # List of instances to monitor. Each instance is a dict where
+    # the global configuration values can be overridden.
+    ("instances", [{}]),
+)
 
 
 class SkipInstance(RuntimeError):
     pass
 
 
-class PreemptiveBasicAuthHandler(urllib2.HTTPBasicAuthHandler):
-    """
-    sends basic authentication with the first request,
-    before the server even asks for it
-    """
-
-    def http_request(self, req):
-        url = req.get_full_url()
-        realm = None
-        user, pwd = self.passwd.find_user_password(realm, url)
-        if pwd:
-            raw = "%s:%s" % (user, pwd)
-            auth = 'Basic %s' % base64.b64encode(raw).strip()
-            req.add_unredirected_header(self.auth_header, auth)
-        return req
-
-    https_request = http_request
+class SkipMBean(RuntimeError):
+    pass
 
 
-class HTTPSValidatingConnection(HTTPSConnection):
-    def __init__(self, host, ca_file, key_file, cert_file):
-        HTTPSConnection.__init__(
-            self, host, key_file=key_file, cert_file=cert_file)
-        self.__ca_file = ca_file
-        self.__key_file = key_file
-        self.__cert_file = cert_file
-
-    def connect(self):
-        HTTPConnection.connect(self)
-        if self.__ca_file:
-            self.sock = ssl.wrap_socket(
-                self.sock,
-                keyfile=self.key_file,
-                certfile=self.cert_file,
-                ca_certs=self.__ca_file,
-                cert_reqs=ssl.CERT_REQUIRED)
-        else:
-            self.sock = ssl.wrap_socket(
-                self.sock,
-                keyfile=self.key_file,
-                certfile=self.cert_file,
-                ca_certs=self.__ca_file,
-                cert_reqs=ssl.CERT_NONE)
-
-
-class HTTPSAuthHandler(urllib2.HTTPSHandler):
-    def __init__(self, ca_file, key, cert):
-        urllib2.HTTPSHandler.__init__(self)
-        self.__ca_file = ca_file
-        self.__key = key
-        self.__cert = cert
-
-    def https_open(self, req):
-        # do_open expects a class as the first parameter but getConnection will act
-        # as a facotry function
-        return self.do_open(self.get_connection, req)
-
-    def get_connection(self, host, _timeout):
-        return HTTPSValidatingConnection(
-            host, ca_file=self.__ca_file, key_file=self.__key, cert_file=self.__cert)
+def get_default_config_dict():
+    return dict(tup[:2] for tup in DEFAULT_CONFIG_TUPLES)
 
 
 def write_section(name, iterable):
@@ -250,89 +194,198 @@ def cached(function):
     cache = {}
 
     def cached_function(*args):
+        key = repr(args)
         try:
-            return cache[args]
+            return cache[key]
         except KeyError:
-            return cache.setdefault(args, function(*args))
+            return cache.setdefault(key, function(*args))
 
     return cached_function
 
 
-def _get_post_data(path, service_url, service_user, service_password, function):
-    segments = path.split("/")
+class JolokiaInstance(object):
+    @staticmethod
+    def _sanitize_config(config):
+        instance = config.get("instance")
+        err_msg = "%s in configuration"
+        if instance:
+            err_msg += " for %s" % instance
 
-    data = {
-        "type": function.upper(),
-        "mbean": segments[0],
-        "attribute": segments[1],
-        "target": {
-            "url": service_url,
-        },
-    }
-    if len(segments) > 2:
-        data["path"] = segments[2]
-    if service_user:
-        data["target"]["user"] = service_user
-        data["target"]["password"] = service_password
+        required_keys = set(("protocol", "server", "port", "suburi", "timeout"))
+        auth_mode = config.get("mode")
+        if auth_mode in ("digest", "basic", "basic_preemtive"):
+            required_keys |= set(("user", "password"))
+        elif auth_mode == "https":
+            required_keys |= set(("client_cert", "client_key"))
+        if config.get("service_url") is not None and config.get("service_user") is not None:
+            required_keys.add("service_password")
+        missing_keys = required_keys - set(config.keys())
+        if missing_keys:
+            raise ValueError(err_msg % ("Missing key(s): %s" % ", ".join(sorted(missing_keys))))
 
-    return json.dumps(data)
+        if not instance:
+            instance = str(config["port"])
+        config["instance"] = instance.replace(" ", "_")
+
+        # port must be (or look like) an integer, timeout like float
+        for key, type_ in (("port", int), ("timeout", float)):
+            val = config[key]
+            try:
+                config[key] = type_(val)
+            except ValueError:
+                raise ValueError(err_msg % ("Invalid %s %r" % (key, val)))
+
+        if config.get("server") == "use fqdn":
+            config["server"] = socket.getfqdn()
+
+        # if "verify" was not set to bool/string
+        if config.get("verify") is None:
+            # handle legacy "cert_path"
+            cert_path = config.get("cert_path")
+            if cert_path not in ("_default", None):
+                # The '_default' was the default value
+                # up to cmk version 1.5.0p8. It broke things.
+                config["verify"] = cert_path
+            else:
+                # this is default, but be explicit
+                config["verify"] = True
+
+        return config
+
+    def __init__(self, config):
+        super(JolokiaInstance, self).__init__()
+        self._config = self._sanitize_config(config)
+
+        self.name = self._config["instance"]
+        self.product = self._config.get("product")
+        self.custom_vars = self._config.get("custom_vars", [])
+
+        self.base_url = self._get_base_url()
+        self.target = self._get_target()
+        self.post_config = {"ignoreErrors": "true"}
+        self._session = self._initialize_http_session()
+
+    def _get_base_url(self):
+        return "%s://%s:%d/%s/" % (
+            self._config["protocol"].strip('/'),
+            self._config["server"].strip('/'),
+            self._config["port"],
+            self._config["suburi"],
+        )
+
+    def _get_target(self):
+        url = self._config.get("service_url")
+        if url is None:
+            return {}
+        user = self._config.get("service_user")
+        if user is None:
+            return {"url": url}
+        return {
+            "url": url,
+            "user": user,
+            "password": self._config["service_password"],
+        }
+
+    def _initialize_http_session(self):
+        session = requests.Session()
+        # Watch out: we must provide the verify keyword to every individual request call!
+        # Else it will be overwritten by the REQUESTS_CA_BUNDLE env variable
+        session.verify = self._config["verify"]
+        if session.verify is False:
+            urllib3.disable_warnings(category=urllib3.exceptions.InsecureRequestWarning)
+        session.timeout = self._config["timeout"]
+
+        auth_method = self._config.get("mode")
+        if auth_method is None:
+            return session
+
+        # initialize authentication
+        if auth_method == "https":
+            session.cert = (
+                self._config["client_cert"],
+                self._config["client_key"],
+            )
+        elif auth_method == 'digest':
+            session.auth = HTTPDigestAuth(
+                self._config["user"],
+                self._config["password"],
+            )
+        elif auth_method in ("basic", "basic_preemptive"):
+            session.auth = (
+                self._config["user"],
+                self._config["password"],
+            )
+        else:
+            raise NotImplementedError("Authentication method %r" % auth_method)
+
+        return session
+
+    def get_post_data(self, path, function, use_target):
+        segments = path.strip("/").split("/")
+        # we may have one to three segments:
+        data = dict(zip(("mbean", "attribute", "path"), segments))
+
+        data["type"] = function
+        if use_target and self.target:
+            data["target"] = self.target
+        data["config"] = self.post_config
+        return data
+
+    def post(self, data):
+        post_data = json.dumps(data)
+        if VERBOSE:
+            sys.stderr.write("\nDEBUG: POST data: %r\n" % post_data)
+        try:
+            # Watch out: we must provide the verify keyword to every individual request call!
+            # Else it will be overwritten by the REQUESTS_CA_BUNDLE env variable
+            raw_response = self._session.post(self.base_url,
+                                              data=post_data,
+                                              verify=self._session.verify)
+        except () if DEBUG else requests.exceptions.ConnectionError:
+            raise SkipInstance("Cannot connect to server at %s" % self.base_url)
+        except () if DEBUG else Exception as exc:
+            sys.stderr.write("ERROR: %s\n" % exc)
+            raise SkipMBean(exc)
+
+        return validate_response(raw_response)
 
 
-def fetch_url(request_url, post_data=None):
+def validate_response(raw):
+    '''return loaded response or raise exception'''
+    if VERBOSE > 1:
+        sys.stderr.write("DEBUG: %r:\n"
+                         "DEBUG:   headers: %r\n"
+                         "DEBUG:   content: %r\n\n" % (raw, raw.headers, raw.content))
+
+    # check the status of the http server
+    if not 200 <= raw.status_code < 300:
+        sys.stderr.write("ERROR: HTTP STATUS: %d\n" % raw.status_code)
+        # Unauthorized, Forbidden, Bad Gateway
+        if raw.status_code in (401, 403, 502):
+            raise SkipInstance("HTTP STATUS", raw.status_code)
+        raise SkipMBean("HTTP STATUS", raw.status_code)
+
+    response = raw.json()
+    # check the status of the jolokia response
+    if response.get("status") != 200:
+        errmsg = response.get("error", "unkown error")
+        sys.stderr.write("ERROR: JAVA: %s\n" % errmsg)
+        raise SkipMBean("JAVA", errmsg)
+
+    if "value" not in response:
+        sys.stderr.write("ERROR: missing 'value': %r\n" % response)
+        raise SkipMBean("ERROR", "missing 'value'")
+
     if VERBOSE:
-        sys.stderr.write("DEBUG: Fetching: %s\n" % request_url)
-    try:
-        json_data = urllib2.urlopen(request_url, data=post_data).read()
-        if VERBOSE:
-            sys.stderr.write("DEBUG: Result: %s\n\n" % json_data)
-    except () if DEBUG else Exception, exc:
-        sys.stderr.write("ERROR: %s\n\n" % exc)
-        return []
-    return json_data
+        sys.stderr.write("\nDEBUG: RESPONSE: %r\n" % response)
+
+    return response
 
 
-def fetch_var(protocol,
-              server,
-              port,
-              path,
-              suburi,
-              service_url,
-              service_user,
-              service_password,
-              function="read"):
-    base_url = "%s://%s:%d/%s" % (protocol, server, port, suburi)
-
-    if service_url is not None:
-        post_data = _get_post_data(
-            path, service_url, service_user, service_password, function)
-        json_data = fetch_url(base_url, post_data)
-    else:
-        request_url = "%s/%s/%s" % (base_url, function,
-                                    path) if path else base_url + "/"
-        json_data = fetch_url(request_url)
-
-    try:
-        obj = json.loads(json_data)
-    except (ValueError, TypeError), exc:
-        sys.stderr.write('ERROR: Invalid json code (%s)\n' % exc)
-        sys.stderr.write('       Response %s\n' % json_data)
-        return []
-
-    if obj.get('status', 200) != 200:
-        sys.stderr.write(
-            'ERROR: Invalid response when fetching url %s\n' % base_url)
-        sys.stderr.write('       Response: %s\n' % json_data)
-        return []
-
-    # Only take the value of the object. If the value is an object
-    # take the first items first value.
-    # {'Catalina:host=localhost,path=\\/test,type=Manager': {'activeSessions': 0}}
-    try:
-        return obj['value']
-    except KeyError:
-        if VERBOSE:
-            sys.stderr.write("ERROR: not found: %s\n" % path)
-        return []
+def fetch_var(inst, function, path, use_target=False):
+    data = inst.get_post_data(path, function, use_target=use_target)
+    obj = inst.post(data)
+    return obj['value']
 
 
 # convert single values into lists of items in
@@ -365,22 +418,18 @@ def make_item_list(path, value, itemspec):
 # key = 'Catalina:host=localhost,path=\\/,type=Manager'
 # itemsepc = [ "path" ]
 # --> "/"
-
-
 def extract_item(key, itemspec):
+    if not itemspec:
+        return ()
+
     path = key.split(":", 1)[-1]
     components = path.split(",")
+    comp_dict = dict(c.split('=') for c in components if c.count('=') == 1)
+
     item = ()
-    comp_dict = {}
-    for comp in components:
-        parts = comp.split("=")
-        if len(parts) == 2:
-            left, right = parts
-            comp_dict[left] = right
     for pathkey in itemspec:
         if pathkey in comp_dict:
             right = comp_dict[pathkey]
-            right = right.replace(r'\/', '/')
             if '/' in right:
                 right = '/' + right.split('/')[-1]
             item = item + (right,)
@@ -388,9 +437,8 @@ def extract_item(key, itemspec):
 
 
 def fetch_metric(inst, path, title, itemspec, inst_add=None):
-    value = fetch_var(inst["protocol"], inst["server"], inst["port"], path, inst["suburi"],
-                      inst["service_url"], inst["service_user"], inst["service_password"])
-    item_list = make_item_list((), value, itemspec)
+    values = fetch_var(inst, "read", path, use_target=True)
+    item_list = make_item_list((), values, itemspec)
 
     for subinstance, value in item_list:
         if not subinstance and not title:
@@ -401,11 +449,12 @@ def fetch_metric(inst, path, title, itemspec, inst_add=None):
             continue
 
         if len(subinstance) > 1:
-            item = ",".join((inst["instance"],) + subinstance[:-1])
+            item = ",".join((inst.name,) + subinstance[:-1])
         elif inst_add is not None:
-            item = inst["instance"] + "," + inst_add
+            item = ",".join((inst.name, inst_add))
         else:
-            item = inst["instance"]
+            item = inst.name
+
         if title:
             if subinstance:
                 tit = title + "." + subinstance[-1]
@@ -422,23 +471,17 @@ def _get_queries(do_search, inst, itemspec, title, path, mbean):
     if not do_search:
         return [(mbean + "/" + path, title, itemspec)]
 
-    value = fetch_var(
-        inst["protocol"],
-        inst["server"],
-        inst["port"],
-        mbean,
-        inst["suburi"],
-        None,
-        None,
-        None,
-        function="search")
+    try:
+        value = fetch_var(inst, "search", mbean)
+    except () if DEBUG else SkipMBean:
+        return []
+
     try:
         paths = make_item_list((), value, "")[0][1]
     except IndexError:
         return []
 
-    return [("%s/%s" % (urllib2.quote(mbean_exp), path), path, itemspec, mbean_exp)
-            for mbean_exp in paths]
+    return [("%s/%s" % (urllib2.quote(mbean_exp), path), path, itemspec) for mbean_exp in paths]
 
 
 def _process_queries(inst, queries):
@@ -448,71 +491,47 @@ def _process_queries(inst, queries):
                 yield item, out_title, value
         except (IOError, socket.timeout):
             raise SkipInstance()
+        except SkipMBean:
+            continue
         except () if DEBUG else Exception:
             continue
 
 
 def query_instance(inst):
-    try:
-        prepare_http_opener(inst)
-    except () if DEBUG else Exception, exc:
-        sys.stderr.write("ERROR: %s\n" % exc)
-        raise SkipInstance()
-
-    shipped_vars = QUERY_SPECS_GENERIC + \
-        QUERY_SPECS_SPECIFIC.get(inst["product"], [])
-    custom_vars = inst.get("custom_vars")
-
     write_section('jolokia_info', generate_jolokia_info(inst))
-    write_section('jolokia_metrics', generate_values(inst, shipped_vars))
-    write_section('jolokia_generic', generate_values(inst, custom_vars))
 
+    # now (after jolokia_info) we're sure about the product
+    specs_specific = QUERY_SPECS_SPECIFIC_LEGACY.get(inst.product, [])
+    write_section('jolokia_metrics', generate_values(inst, specs_specific))
+    write_section('jolokia_metrics', generate_values(inst, QUERY_SPECS_LEGACY))
 
-def prepare_http_opener(inst):
-    # Prepare user/password authentication via HTTP Auth
-    password_mngr = urllib2.HTTPPasswordMgrWithDefaultRealm()
-    if inst.get("password"):
-        password_mngr.add_password(None,
-                                   "%s://%s:%d/" % (inst["protocol"],
-                                                    inst["server"], inst["port"]),
-                                   inst["user"], inst["password"])
+    sections_specific = MBEAN_SECTIONS_SPECIFIC.get(inst.product, {})
+    for section_name, mbeans in sections_specific.iteritems():
+        write_section('jolokia_%s' % section_name, generate_json(inst, mbeans))
+    for section_name, mbeans in MBEAN_SECTIONS.iteritems():
+        write_section('jolokia_%s' % section_name, generate_json(inst, mbeans))
 
-    handlers = []
-    if inst["protocol"] == "https":
-        if inst["mode"] == 'https' and (inst["client_key"] is None or inst["client_cert"] is None):
-            raise ValueError(
-                "Missing client certificate for HTTPS authentication")
-        handlers.append(
-            HTTPSAuthHandler(inst["cert_path"], inst["client_key"], inst["client_cert"]))
-    if inst["mode"] == 'digest':
-        handlers.append(urllib2.HTTPDigestAuthHandler(password_mngr))
-    elif inst["mode"] == "basic_preemptive":
-        handlers.append(PreemptiveBasicAuthHandler(password_mngr))
-    elif inst["mode"] == "basic" and inst["protocol"] != "https":
-        handlers.append(urllib2.HTTPBasicAuthHandler(password_mngr))
-
-    if handlers:
-        opener = urllib2.build_opener(*handlers)
-        urllib2.install_opener(opener)
+    write_section('jolokia_generic', generate_values(inst, inst.custom_vars))
 
 
 def generate_jolokia_info(inst):
     # Determine type of server
-    value = fetch_var(inst["protocol"], inst["server"], inst["port"], "", inst["suburi"], None,
-                      None, None)
-    server_info = make_item_list((), value, "")
+    try:
+        data = fetch_var(inst, "version", "")
+    except (SkipInstance, SkipMBean) as exc:
+        yield inst.name, "ERROR", str(exc)
+        raise SkipInstance(exc)
 
-    if not server_info:
-        sys.stderr.write("%s ERROR: Empty server info\n" % (inst["instance"],))
-        raise SkipInstance()
+    info = data.get('info', {})
+    version = info.get('version', "unknown")
+    product = info.get('product', "unknown")
+    if inst.product is not None:
+        product = inst.product
+    else:
+        inst.product = product
 
-    info_dict = dict(server_info)
-    version = info_dict.get(('info', 'version'), "unknown")
-    product = info_dict.get(('info', 'product'), "unknown")
-    if inst.get("product"):
-        product = inst["product"]
-    agentversion = info_dict.get(('agent',), "unknown")
-    yield inst["instance"], product, version, agentversion
+    agentversion = data.get('agent', "unknown")
+    yield inst.name, product, version, agentversion
 
 
 def generate_values(inst, var_list):
@@ -529,33 +548,36 @@ def generate_values(inst, var_list):
                 yield item, title, value
 
 
-def yield_configured_instances():
+def generate_json(inst, mbeans):
+    for mbean in mbeans:
+        try:
+            data = inst.get_post_data(mbean, "read", use_target=True)
+            obj = inst.post(data)
+            yield inst.name, mbean, json.dumps(obj['value'])
+        except (IOError, socket.timeout):
+            raise SkipInstance()
+        except SkipMBean if DEBUG else Exception:
+            pass
 
-    custom_config = copy.deepcopy(DEFAULT_CONFIG)
 
-    conffile = os.path.join(
-        os.getenv("MK_CONFDIR", "/etc/check_mk"), "jolokia.cfg")
+def yield_configured_instances(custom_config=None):
+
+    if custom_config is None:
+        custom_config = get_default_config_dict()
+
+    conffile = os.path.join(os.getenv("MK_CONFDIR", "/etc/check_mk"), "jolokia.cfg")
     if os.path.exists(conffile):
-        execfile(conffile, {}, custom_config)
+        exec (open(conffile).read(), {}, custom_config)
 
-    # Compute list of instances to monitor. If the user has defined
-    # instances in his configuration, we will use this (a list
-    # of dicts).
-    instances = custom_config.pop("instances", [{}])
-    for inst in instances:
-        yield {k: inst.get(k, custom_config[k]) for k in custom_config}
-
-
-def sanitize_config(config):
-
-    if not config["instance"]:
-        config["instance"] = str(config["port"])
-    config["instance"] = config["instance"].replace(" ", "_")
-
-    if config.get("server") == "use fqdn":
-        config["server"] = socket.getfqdn()
-
-    return config
+    # Generate list of instances to monitor. If the user has defined
+    # instances in his configuration, we will use this (a list of dicts).
+    individual_configs = custom_config.pop("instances", [{}])
+    for cfg in individual_configs:
+        keys = set(cfg.keys() + custom_config.keys())
+        conf_dict = dict((k, cfg.get(k, custom_config.get(k))) for k in keys)
+        if VERBOSE:
+            sys.stderr.write("DEBUG: configuration: %r\n" % conf_dict)
+        yield conf_dict
 
 
 def main(configs_iterable=None):
@@ -563,7 +585,7 @@ def main(configs_iterable=None):
         configs_iterable = yield_configured_instances()
 
     for config in configs_iterable:
-        instance = sanitize_config(config)
+        instance = JolokiaInstance(config)
         try:
             query_instance(instance)
         except SkipInstance:

@@ -33,7 +33,7 @@
 # - Async-Zeit einstellbar machen und das Ding immer async laufen lassen
 # Check programmieren:
 #   * Schwellwerte auf Anzahlen
-#   * Regexen auf Pakete, die zu CRIT/WARN fÃ¼hren
+#   * Regexen auf Pakete, die zu CRIT/WARN führen
 # - Graph malen mit zwei Kurven
 
 # This variable can either be "upgrade" or "dist-upgrade"
@@ -50,7 +50,7 @@ function check_apt_update {
         # 1397BC53640DB551
         apt-get update -qq 2> /dev/null
     fi
-    apt-get -o 'Debug::NoLocking=true' -s -qq "$UPGRADE" | grep -v '^Conf'
+    apt-get -o 'Debug::NoLocking=true' -o 'APT::Get::Show-User-Simulation-Note=false' -s -qq "$UPGRADE" | grep -v '^Conf'
 }
 
 
