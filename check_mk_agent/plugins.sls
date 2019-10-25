@@ -155,10 +155,15 @@ installSwitch:
 
 /usr/lib/check_mk_agent/plugins/3600/mk_docker_node:
   file.absent
-
-
 /usr/lib/check_mk_agent/plugins/3600/mk_docker_piggyback:
   file.absent
+/usr/lib/check_mk_agent/plugins/3600/mk_docker_py:
+  file.absent
+
+/etc/check_mk/docker.cfg:
+  file.managed:
+    - source: salt://check_mk_agent/files/cfg/docker.cfg
+    - mode: 644
 
 python-pip:
   pkg.installed
@@ -168,7 +173,7 @@ docker:
     - require:
       - pkg: python-pip
 
-/usr/lib/check_mk_agent/plugins/3600/mk_docker.py:
+/usr/lib/check_mk_agent/plugins/mk_docker.py:
   file.managed:
     - source: salt://check_mk_agent/files/plugins/mk_docker.py
     - mode: 755
