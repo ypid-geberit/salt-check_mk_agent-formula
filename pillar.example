@@ -10,8 +10,8 @@ check_mk_agent:
    mysql:
      - 'user: foo'
      - 'password: bar'
-   apache-status: True
-   nginx-status: True
+   apache: True
+   nginx: True
    fileinfo:
      - '/path/to/file'
      - '/path/to/otherfile'
