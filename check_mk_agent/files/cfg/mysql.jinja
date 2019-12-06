@@ -1,5 +1,7 @@
+# do not edit
+# file is managed by saltstack
+
 [client]
 {%- for item in salt['pillar.get']('check_mk_agent:plugins:mysql', []) %}
 {{ item }}
 {% endfor %}
-
