@@ -6,6 +6,9 @@ check_mk_agent:
   criticality: 'prod' # possible: prod, critical, test, dev, offline
   api-user: 'username'
   api-secret: 'secret'
+  encryption:
+    passphrase: '*secret*'
+  trigger_type: 'systemd'
   plugins:
    mysql:
      - 'user: foo'
@@ -18,4 +21,3 @@ check_mk_agent:
    supervisor: 'checkname /usr/local/bin/check-supervisor.rb $Paramater'
    check-http-ping:
      - 'checkname /usr/local/bin/check-http-json.rb $Paramater'
-

@@ -2,6 +2,57 @@
 {% from "check_mk_agent/map.jinja" import check_mk_agent with context %}
 
 
+/usr/lib/check_mk_agent/plugins/mk_inventory:
+  file.managed:
+    - source: salt://check_mk_agent/files/plugins/mk_inventory
+    - mode: 755
+
+/usr/lib/check_mk_agent/plugins/mk_logins:
+  file.managed:
+    - source: salt://check_mk_agent/files/plugins/mk_logins
+    - mode: 755
+
+{% set netstat_command = salt['cmd.run']('sh -c "command -v netstat"') %}
+{% if netstat_command|string|lower != "" %}
+/usr/lib/check_mk_agent/plugins/netstat:
+  file.managed:
+    - source: salt://check_mk_agent/files/plugins/netstat
+    - mode: 755
+{% else %}
+/usr/lib/check_mk_agent/plugins/netstat:
+  file.absent
+{% endif %}
+
+
+{% if grains['os_family'] == 'Debian' %}
+/usr/lib/check_mk_agent/plugins/mk_apt:
+  file.absent
+
+/usr/lib/check_mk_agent/plugins/14400/mk_apt:
+  file.managed:
+    - source: salt://check_mk_agent/files/plugins/mk_apt
+    - mode: 755
+    - makedirs: True
+
+/usr/lib/check_mk_agent/local/check_reboot:
+  file.managed:
+    - source: salt://check_mk_agent/files/plugins/check_reboot
+    - mode: 755
+{% endif %}
+
+{# FIXME: Remove this duplicate #}
+{% if salt['pillar.get']('check_mk_agent:plugins:apt') %}
+
+/usr/lib/check_mk_agent/plugins/3600/mk_apt:
+  file.managed:
+    - source: salt://check_mk_agent/files/plugins/mk_apt
+    - mode: 755
+    - makedirs: True
+    - dir_mode: 755
+
+{% endif %}
+
+
 {% if salt['pillar.get']('check_mk_agent:plugins:nginx') %}
 
 /etc/check_mk/nginx_status.cfg:
@@ -136,17 +187,6 @@ installSwitch:
   file.managed:
     - source: salt://check_mk_agent/files/plugins/jolokia-war-1.3.5.war
     - mode: 644
-
-{% endif %}
-
-{% if salt['pillar.get']('check_mk_agent:plugins:apt') %}
-
-/usr/lib/check_mk_agent/plugins/3600/mk_apt:
-  file.managed:
-    - source: salt://check_mk_agent/files/plugins/mk_apt
-    - mode: 755
-    - makedirs: True
-    - dir_mode: 755
 
 {% endif %}
 
